@@ -991,6 +991,7 @@ int sysctl_protected_hardlinks __read_mostly = 1;
 int sysctl_protected_fifos __read_mostly = 2;
 int sysctl_protected_regular __read_mostly = 2;
 
+
 /**
  * may_follow_link - Check symlink following for unsafe situations
  * @nd: nameidata pathwalk data
