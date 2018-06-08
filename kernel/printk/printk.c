@@ -485,11 +485,12 @@ static u32 clear_idx_knox;
 // SecProductFeature_KNOX.SEC_PRODUCT_FEATURE_KNOX_SUPPORT_MDM }
 #ifdef CONFIG_SEC_LOG_BUF
 #define PREFIX_MAX		48
-#define LOG_LINE_MAX		(2048 - PREFIX_MAX)
+#define LOG_LINE_MAX		(3072 - PREFIX_MAX)
 #else
 #define PREFIX_MAX		32
-#define LOG_LINE_MAX		(1024 - PREFIX_MAX)
+#define LOG_LINE_MAX		(3072 - PREFIX_MAX)
 #endif
+
 
 #define LOG_LEVEL(v)		((v) & 0x07)
 #define LOG_FACILITY(v)		((v) >> 3 & 0xff)
