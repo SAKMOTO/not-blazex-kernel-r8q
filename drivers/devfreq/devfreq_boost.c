@@ -57,6 +57,7 @@ static struct df_boost_drv df_boost_drv_g __read_mostly = {
 };
 
 extern int kp_active_mode(void);
+unsigned long last_input_time;
 
 static void __devfreq_boost_kick(struct boost_dev *b)
 {
@@ -231,6 +232,8 @@ static void devfreq_boost_input_event(struct input_handle *handle,
 
 	for (i = 0; i < DEVFREQ_MAX; i++)
 		__devfreq_boost_kick(d->devices + i);
+
+	last_input_time = jiffies;
 }
 
 static int devfreq_boost_input_connect(struct input_handler *handler,
