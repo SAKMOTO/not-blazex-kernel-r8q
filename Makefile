@@ -897,8 +897,9 @@ endif
 ifdef CONFIG_LTO_CLANG
 #KBUILD_CFLAGS_KERNEL += -ffunction-sections -fdata-sections
 #LDFLAGS_vmlinux += --gc-sections --warn-limit=1
-lto-clang-flags	:= -flto=thin
-lto-clang-flags += -fvisibility=default $(call cc-option, -fsplit-lto-unit)
+lto-clang-flags	:= -flto=thin -fipa-pta -fno-fat-lto-objects \
+                   -fuse-linker-plugin -fwhole-program
+lto-clang-flags += -fvisibility=default $(call cc-option, -fsplit-lto-unit) --lto-O3
 
 # Limit inlining across translation units to reduce binary size
 LD_FLAGS_LTO_CLANG := -mllvm -import-instr-limit=5
