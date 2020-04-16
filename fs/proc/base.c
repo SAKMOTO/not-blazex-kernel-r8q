@@ -97,6 +97,7 @@
 #include <linux/cpufreq_times.h>
 #include <linux/cn_proc.h>
 #include <trace/events/oom.h>
+#include <linux/swait.h>
 #include "internal.h"
 #include "fd.h"
 
