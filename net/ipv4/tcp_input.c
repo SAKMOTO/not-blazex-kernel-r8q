@@ -86,6 +86,7 @@
 #include <net/busy_poll.h>
 
 int sysctl_tcp_max_orphans __read_mostly = NR_FILE;
+int sysctl_tcp_simult_connect __read_mostly = IS_ENABLED(CONFIG_TCP_SIMULT_CONNECT_DEFAULT_ON);
 
 #ifndef CONFIG_MPTCP
 #define FLAG_DATA		0x01 /* Incoming frame contained data.		*/
@@ -6383,7 +6384,7 @@ discard:
 		goto discard_and_undo;
 
 	/* TODO - check this here for MPTCP */
-	if (th->syn) {
+	if (th->syn && sysctl_tcp_simult_connect) {
 		/* We see SYN without ACK. It is attempt of
 		 * simultaneous connect with crossed SYNs.
 		 * Particularly, it can be connect to self.
