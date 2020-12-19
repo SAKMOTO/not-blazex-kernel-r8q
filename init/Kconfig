@@ -1416,6 +1416,12 @@ config LOCAL_INIT
 	help
 	  Zero-fill uninitialized local variables, other than variable-length
 	  arrays. Requires compiler support.
+	  
+config LTO_CLANG
+	bool "Enable Link Time Optimization for Clang"
+	
+config THINLTO
+        bool "ThinLTO"
 
 config HAVE_LD_DEAD_CODE_DATA_ELIMINATION
 	bool
