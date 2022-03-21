@@ -461,6 +461,7 @@ config SCHED_WALT
 
 config SONY_SCHED
 	bool "Support SONY's scheduler optimizations"
+	def_bool y
 	depends on SCHED_WALT
 	help
 	  This option will enable the scheduler codes at compile time that
