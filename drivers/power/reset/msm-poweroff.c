@@ -495,13 +495,13 @@ static void msm_restart_prepare(const char *cmd)
 	bool need_warm_reset = false;
 
 #ifndef CONFIG_SEC_DEBUG
-	/* Write download mode flags if we're panic'ing
-	 * Write download mode flags if restart_mode says so
+	/* Write download mode flags if restart_mode says so
+>>>>>>> c19470eea6854 (power: reset: msm-poweroff: Don't reboot to EDL when kernel panics)
 	 * Kill download mode if master-kill switch is set
 	 */
 
 	set_dload_mode(download_mode &&
-			(in_panic || restart_mode == RESTART_DLOAD));
+			(restart_mode == RESTART_DLOAD));
 #else
 	sec_debug_update_dload_mode(restart_mode, in_panic);
 #endif
