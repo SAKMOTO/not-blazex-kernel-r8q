@@ -168,7 +168,8 @@ unsigned int capacity_margin				= 1280;
 unsigned int sched_capacity_margin_up[NR_CPUS] = {
 			[0 ... NR_CPUS-1] = 1078}; /* ~5% margin */
 unsigned int sched_capacity_margin_down[NR_CPUS] = {
-			[0 ... NR_CPUS-1] = 1205}; /* ~15% margin */
+			1024, 1024, 1024, 1024, 1796, 1796, 1796, 1442
+}; /* Not used for small, ~43% margin for big, ~29% for prime */
 
 #ifdef CONFIG_SCHED_WALT
 /* 1ms default for 20ms window size scaled to 1024 */
@@ -3941,8 +3942,7 @@ static inline bool task_fits_capacity(struct task_struct *p,
 	unsigned int margin;
 
 	/*
-	 * Derive upmigration/downmigrate margin wrt the src/dest
-	 * CPU.
+	 * Derive upmigration/downmigrate margin wrt the src/dest CPU.
 	 */
 	if (capacity_orig_of(task_cpu(p)) > capacity_orig_of(cpu))
 		margin = sched_capacity_margin_down[cpu];
@@ -3964,7 +3964,7 @@ static inline bool task_fits_max(struct task_struct *p, int cpu)
 	if (is_min_capacity_cpu(cpu)) {
 		if (task_boost_policy(p) == SCHED_BOOST_ON_BIG ||
 			task_boost > 0 ||
-			schedtune_task_boost(p) > 0 ||
+			uclamp_boosted(p) ||
 			walt_should_kick_upmigrate(p, cpu))
 			return false;
 	} else { /* mid cap cpu */
