@@ -687,6 +687,13 @@ include/config/auto.conf:
 endif # may-sync-config
 endif # $(dot-config)
 
+CLANG_VERSION := $(shell clang --version | head -n1 | sed -E 's/.*version ([0-9]+)\..*/\1/')
+
+ifneq ($(CLANG_VERSION),21)
+$(error You must use Clang version 21 to build this kernel. Detected Clang version: $(CLANG_VERSION))
+endif
+
+
 KBUILD_CFLAGS	+= $(call cc-option,-fno-delete-null-pointer-checks,)
 KBUILD_CFLAGS	+= $(call cc-disable-warning,frame-address,)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-truncation)
