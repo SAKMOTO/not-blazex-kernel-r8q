@@ -2151,6 +2151,7 @@ static void prep_new_page(struct page *page, unsigned int order, gfp_t gfp_flags
 							unsigned int alloc_flags)
 #endif
 {
+	int i;
 	post_alloc_hook(page, order, gfp_flags);
 
 

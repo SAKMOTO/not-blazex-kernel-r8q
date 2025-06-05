@@ -1246,6 +1246,9 @@ int perf_event_max_stack_handler(struct ctl_table *table, int write,
 #define PERF_SECURITY_TRACEPOINT	3
 
 static inline int perf_is_paranoid(void)
+{
+	return sysctl_perf_event_paranoid > -1;
+}
 
 static inline bool perf_paranoid_any(void)
 {

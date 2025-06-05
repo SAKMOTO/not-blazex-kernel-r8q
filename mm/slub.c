@@ -3375,14 +3375,14 @@ int kmem_cache_alloc_bulk(struct kmem_cache *s, gfp_t flags, size_t size,
 
 	/* Clear memory outside IRQ disabled fastpath loop */
 	if (has_sanitize_verify(s)) {
-		int j;
-
+         	int j;
+         	
 		for (j = 0; j < i; j++) {
 			size_t offset = s->offset ? 0 : sizeof(void *);
 			BUG_ON(memchr_inv(p[j] + offset, 0, s->object_size - offset));
 			if (s->ctor)
 				s->ctor(p[j]);
-			if (unlikely(slab_want_init_on_alloc(flags, s))) {
+			if (unlikely(flags & __GFP_ZERO) && offset)
 				memset(p[j], 0, sizeof(void *));
 		}
 	} else if (unlikely(slab_want_init_on_alloc(flags, s))) {
