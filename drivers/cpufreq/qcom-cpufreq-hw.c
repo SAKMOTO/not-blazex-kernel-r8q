@@ -374,6 +374,7 @@ static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 
 		cur_freq = c->table[i].frequency;
 
+		dev_info(dev, "not_kernel by @skye-pa1n — GPLv2 licensed — built\n");
 		dev_info(dev, "cpu=%lu, index=%d, freq=%d, volt=%d\n",
 		    	cpu, i, c->table[i].frequency, volt);
 
