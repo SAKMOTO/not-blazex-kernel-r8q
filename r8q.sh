@@ -1,41 +1,39 @@
 #!/bin/bash
-LLVM_PATH="/home/skye/bomb/clang/bin/"
-TC_PATH="/home/skye/bomb/clang/bin/"
-GCC_PATH="/usr/bin/"
-LLD_PATH="/usr/bin/"
-KERNEL_NAME="not_kernel-"
-MAKE="./makeparallel"
-BUILD_ENV="ARCH=arm64 CC=${TC_PATH}clang-21 CROSS_COMPILE=${TC_PATH}aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 PATH=$LLVM_PATH:$LLD_PATH:$PATH"  
-KERNEL_MAKE_ENV="DTC_EXT=$(pwd)/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
 
-rm -rf /home/skye/bomb/out/arch/arm64/boot/Image
-rm -rf /home/skye/bomb/AnyKernel3/dtb
-rm -rf /home/skye/bomb/dtbo.img
-rm -rf .version
-rm -rf .local
-#make O=/home/skye/bomb/out clean
-make O=/home/skye/bomb/out $BUILD_ENV vendor/kona-not_defconfig vendor/samsung/r8q.config vendor/debugfs.config
+# Directories
+BASE_DIR=$(pwd)
+CLANG_DIR="$BASE_DIR/clang/bin"
+OUT_DIR="$BASE_DIR/out"
+ANYKERNEL_DIR="$BASE_DIR/AnyKernel3/r8q"
+DTB_OUT="$OUT_DIR/arch/arm64/boot/dts/vendor/qcom"
+IMAGE_OUT="$OUT_DIR/arch/arm64/boot/Image"
+KERNEL_NAME="not_kernel+blazex-$(date +%Y%m%d)+r8q"
 
-echo "*****************************************"
-echo "*****************************************"
+# Build Environment
+export ARCH=arm64
+export SUBARCH=arm64
+export PATH="$CLANG_DIR:/usr/bin:$PATH"
+BUILD_ENV="ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1"
+KERNEL_MAKE_ENV="DTC_EXT=${BASE_DIR}/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
 
-make -j12 O=/home/skye/bomb/out $BUILD_ENV dtbs
-DTB_OUT="/home/skye/bomb/out/arch/arm64/boot/dts/vendor/qcom"
-cat $DTB_OUT/*.dtb > /home/skye/bomb/AnyKernel3/r8q/dtb
+# Clean up old files
+rm -rf "$IMAGE_OUT" "$ANYKERNEL_DIR/dtb" "$OUT_DIR/.version" "$OUT_DIR/.local"
+mkdir -p "$ANYKERNEL_DIR"
 
-#make -j12 O=/home/skye/bomb/out $KERNEL_MAKE_ENV $BUILD_ENV dtbo.img
-DTBO_OUT="/home/skye/bomb/out/arch/arm64/boot"
-#cp $DTBO_OUT/dtbo.img /home/skye/bomb/dtbo.img
+# Configure kernel
+make O="$OUT_DIR" $BUILD_ENV vendor/kona-not_defconfig vendor/samsung/r8q.config vendor/debugfs.config
 
-make -j12 O=/home/skye/bomb/out $KERNEL_MAKE_ENV $BUILD_ENV Image
-IMAGE="/home/skye/bomb/out/arch/arm64/boot/Image"
-echo "**Build outputs**"
-ls /home/skye/bomb/out/arch/arm64/boot
-echo "**Build outputs**"
-cp $IMAGE /home/skye/bomb/AnyKernel3/r8q/Image
+# Build DTBs
+make -j$(nproc) O="$OUT_DIR" $BUILD_ENV dtbs
+cat "$DTB_OUT"/*.dtb > "$ANYKERNEL_DIR/dtb"
 
-cd /home/skye/bomb/AnyKernel3/r8q
-rm *.zip
-zip -r9 ${KERNEL_NAME}$(date +"%Y%m%d")+r8q.zip .
-echo "The bomb has been planted."
+# Build Image
+make -j$(nproc) O="$OUT_DIR" $KERNEL_MAKE_ENV $BUILD_ENV Image
+cp "$IMAGE_OUT" "$ANYKERNEL_DIR/Image"
 
+# Zip flashable kernel
+cd "$ANYKERNEL_DIR"
+rm -f *.zip
+zip -r9 "${KERNEL_NAME}.zip" *
+
+echo "✅ Kernel build complete. Flashable ZIP: $KERNEL_NAME.zip"

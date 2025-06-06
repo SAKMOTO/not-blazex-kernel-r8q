@@ -2,7 +2,7 @@
 VERSION = 4
 PATCHLEVEL = 19
 SUBLEVEL = 331
-EXTRAVERSION = -st4-hardened1.1
+EXTRAVERSION = -not+blazex
 NAME = "People's Front"
 
 # *DOCUMENTATION*
