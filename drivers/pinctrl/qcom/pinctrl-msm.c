@@ -177,9 +177,11 @@ static int msm_pinmux_set_mux(struct pinctrl_dev *pctldev,
 	unsigned long flags;
 	u32 val, mask;
 	int i;
-
+	
+#ifdef CONFIG_SEC_PM_DEBUG
 	if(!msm_gpio_is_valid(group))
 		return 0;
+#endif /* CONFIG_SEC_PM_DEBUG */
 
 	g = &pctrl->soc->groups[group];
 	mask = GENMASK(g->mux_bit + order_base_2(g->nfuncs) - 1, g->mux_bit);
@@ -270,8 +272,10 @@ static int msm_config_group_get(struct pinctrl_dev *pctldev,
 	int ret;
 	u32 val;
 
+#ifdef CONFIG_SEC_PM_DEBUG
 	if(!msm_gpio_is_valid(group))
 		return 0;
+#endif /* CONFIG_SEC_PM_DEBUG */
 
 	g = &pctrl->soc->groups[group];
 
@@ -351,9 +355,11 @@ static int msm_config_group_set(struct pinctrl_dev *pctldev,
 	int ret;
 	u32 val;
 	int i;
-
+	
+#ifdef CONFIG_SEC_PM_DEBUG
 	if(!msm_gpio_is_valid(group))
 		return 0;
+#endif /* CONFIG_SEC_PM_DEBUG */
 
 	g = &pctrl->soc->groups[group];
 
@@ -446,8 +452,10 @@ static int msm_gpio_direction_input(struct gpio_chip *chip, unsigned offset)
 	unsigned long flags;
 	u32 val;
 
+#ifdef CONFIG_SEC_PM_DEBUG
 	if(!msm_gpio_is_valid(offset))
 		return -1;
+#endif /* CONFIG_SEC_PM_DEBUG */
 
 	g = &pctrl->soc->groups[offset];
 
@@ -469,8 +477,10 @@ static int msm_gpio_direction_output(struct gpio_chip *chip, unsigned offset, in
 	unsigned long flags;
 	u32 val;
 
+#ifdef CONFIG_SEC_PM_DEBUG
 	if(!msm_gpio_is_valid(offset))
 		return -1;
+#endif /* CONFIG_SEC_PM_DEBUG */
 
 	g = &pctrl->soc->groups[offset];
 
@@ -498,8 +508,10 @@ static int msm_gpio_get_direction(struct gpio_chip *chip, unsigned int offset)
 	const struct msm_pingroup *g;
 	u32 val;
 
+#ifdef CONFIG_SEC_PM_DEBUG
 	if(!msm_gpio_is_valid(offset))
 		return -1;
+#endif /* CONFIG_SEC_PM_DEBUG */
 
 	g = &pctrl->soc->groups[offset];
 
@@ -514,9 +526,11 @@ static int msm_gpio_get(struct gpio_chip *chip, unsigned offset)
 	const struct msm_pingroup *g;
 	struct msm_pinctrl *pctrl = gpiochip_get_data(chip);
 	u32 val;
-
+	
+#ifdef CONFIG_SEC_PM_DEBUG
 	if(!msm_gpio_is_valid(offset))
 		return -1;
+#endif /* CONFIG_SEC_PM_DEBUG */
 
 	g = &pctrl->soc->groups[offset];
 
@@ -531,8 +545,10 @@ static void msm_gpio_set(struct gpio_chip *chip, unsigned offset, int value)
 	unsigned long flags;
 	u32 val;
 
+#ifdef CONFIG_SEC_PM_DEBUG
 	if(!msm_gpio_is_valid(offset))
 		return;
+#endif /* CONFIG_SEC_PM_DEBUG */
 
 	g = &pctrl->soc->groups[offset];
 
@@ -561,9 +577,11 @@ int msm_set_gpio_status(struct gpio_chip *chip, uint pin_no, uint id, bool level
 	unsigned long flags;
 	u32 cfg_val, inout_val;
 	u32 mask = 0, shft = 0, data;
-
+	
+#ifdef CONFIG_SEC_PM_DEBUG
 	 if(!msm_gpio_is_valid(pin_no))
                 return 0;
+#endif /* CONFIG_SEC_PM_DEBUG */
 
 	g = &pctrl->soc->groups[pin_no];
 
@@ -617,8 +635,10 @@ void msm_gp_get_cfg(struct gpio_chip *chip, uint pin_no, struct gpiomux_setting 
 
 	g = &pctrl->soc->groups[pin_no];
 
+#ifdef CONFIG_SEC_PM_DEBUG
 	if(!msm_gpio_is_valid(pin_no))
 		return;
+#endif /* CONFIG_SEC_PM_DEBUG */
 
 	raw_spin_lock_irqsave(&pctrl->lock, flags);
 	inout_val = readl(pctrl->regs + g->io_reg);
@@ -643,9 +663,11 @@ int msm_gp_get_value(struct gpio_chip *chip, uint pin_no, int in_out_type)
 	u32 inout_val;
 
 	g = &pctrl->soc->groups[pin_no];
-
+	
+#ifdef CONFIG_SEC_PM_DEBUG
 	if(!msm_gpio_is_valid(pin_no))
 		return 0;
+#endif /* CONFIG_SEC_PM_DEBUG */
 
 	raw_spin_lock_irqsave(&pctrl->lock, flags);
 	inout_val = readl(pctrl->regs + g->io_reg);
