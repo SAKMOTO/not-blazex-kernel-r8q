@@ -106,7 +106,7 @@ int _node_numa_mem_[MAX_NUMNODES];
 DEFINE_MUTEX(pcpu_drain_mutex);
 DEFINE_PER_CPU(struct work_struct, pcpu_drain);
 
-bool __meminitdata extra_latent_entropy;
+bool extra_latent_entropy;
 
 static int __init setup_extra_latent_entropy(char *str)
 {
@@ -1565,7 +1565,7 @@ meminit_pfn_in_nid(unsigned long pfn, int node,
 #endif
 
 
-void __free_pages_bootmem(struct page *page, unsigned long pfn,
+__meminit void __free_pages_bootmem(struct page *page, unsigned long pfn,
 							unsigned int order)
 {
 	if (early_page_uninitialised(pfn))
