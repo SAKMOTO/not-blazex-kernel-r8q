@@ -46,7 +46,7 @@ oneui=$(file_getprop /system/build.prop ro.build.version.oneui);
 gsi=$(file_getprop /system/build.prop ro.product.system.device);
 if [ -n "$oneui" ]; then
    ui_print " "
-   ui_print " • OneUI ROM detected! • " # OneUI 6.1.1/6.1/6.0/5.1/5.0/4.1/4.0/3.1 bomb
+   ui_print " • OneUI ROM detected! • " # OneUI 7.0/6.1.1/6.1/6.0/5.1/5.0/4.1/4.0/3.1 bomb
    ui_print " "
    ui_print " • Patching Fingerprint Sensor... • "
    patch_cmdline "android.is_aosp" "android.is_aosp=0";
@@ -58,10 +58,7 @@ elif [ $gsi == generic ]; then
    patch_cmdline "android.is_aosp" "android.is_aosp=0";
 else
    ui_print " "
-   ui_print " • AOSP ROM detected! • " # Android 15/14/13 veri gud
-   ui_print " "
-   ui_print " • Patching CMDline... • "
-   patch_cmdline "androidboot.verifiedbootstate=orange" "androidboot.verifiedbootstate=green"
+   ui_print " • AOSP ROM detected! • " # Android 16/15/14/13 veri gud
    ui_print " "
    ui_print " • Patching Fingerprint Sensor... • "
    patch_cmdline "android.is_aosp" "android.is_aosp=1";
