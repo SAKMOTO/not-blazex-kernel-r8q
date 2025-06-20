@@ -148,7 +148,7 @@ static unsigned long long_max __read_only = LONG_MAX;
 static int one_hundred __read_only = 100;
 static int one_thousand __read_only = 1000;
 #ifdef CONFIG_INCREASE_MAXIMUM_SWAPPINESS
-static int max_swappiness = 200;
+static int max_swappiness = 1000;
 #endif
 #ifdef CONFIG_PRINTK
 static int ten_thousand __read_only = 10000;
@@ -2019,7 +2019,7 @@ static struct ctl_table vm_table[] = {
 		.procname	= "vfs_cache_pressure",
 		.data		= &sysctl_vfs_cache_pressure,
 		.maxlen		= sizeof(sysctl_vfs_cache_pressure),
-		.mode		= 0644,
+		.mode		= 0444,
 		.proc_handler	= proc_dointvec,
 		.extra1		= &zero,
 	},
