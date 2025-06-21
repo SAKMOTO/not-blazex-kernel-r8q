@@ -6,21 +6,23 @@ LLD_PATH="/usr/bin/"
 KERNEL_NAME="not_kernel-"
 MAKE="./makeparallel"
 BUILD_ENV="ARCH=arm64 CC=${TC_PATH}clang-21 CROSS_COMPILE=${TC_PATH}aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 PATH=$LLVM_PATH:$LLD_PATH:$PATH"  
-KERNEL_MAKE_ENV="DTC_EXT=$(pwd)/tools/dtc"
+KERNEL_MAKE_ENV="DTC_EXT=$(pwd)/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
 
 rm -rf /home/skye/bomb/out/arch/arm64/boot/Image
-rm -rf /home/skye/bomb/AnyKernel3/r8q/dtb
+rm -rf /home/skye/bomb/AnyKernel3/dtb
+rm -rf /home/skye/bomb/dtbo.img
 rm -rf .version
 rm -rf .local
-
 #make O=/home/skye/bomb/out clean
 make O=/home/skye/bomb/out $BUILD_ENV not_defconfig
 
 echo "*****************************************"
 echo "*****************************************"
 
-make -j12 O=/home/skye/bomb/out $KERNEL_MAKE_ENV $BUILD_ENV dtbs
+make -j12 O=/home/skye/bomb/out $KERNEL_MAKE_ENV $BUILD_ENV dtbo.img
+DTBO_OUT="/home/skye/bomb/out/arch/arm64/boot"
 DTB_OUT="/home/skye/bomb/out/arch/arm64/boot/dts/vendor/qcom"
+cp $DTBO_OUT/dtbo.img /home/skye/bomb/AnyKernel3/r8q/dtbo.img
 cat $DTB_OUT/*.dtb > /home/skye/bomb/AnyKernel3/r8q/dtb
 
 make -j12 O=/home/skye/bomb/out $KERNEL_MAKE_ENV $BUILD_ENV Image
