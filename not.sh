@@ -21,7 +21,7 @@ echo "*****************************************"
 
 make -j12 O=/home/skye/bomb/out $KERNEL_MAKE_ENV $BUILD_ENV dtbo.img
 DTBO_OUT="/home/skye/bomb/out/arch/arm64/boot"
-$DTB_OUT="/home/skye/bomb/out/arch/arm64/boot/dts/vendor/qcom"
+DTB_OUT="/home/skye/bomb/out/arch/arm64/boot/dts/vendor/qcom"
 cp $DTBO_OUT/dtbo.img /home/skye/bomb/AnyKernel3/r8q/dtbo.img
 cat $DTB_OUT/*.dtb > /home/skye/bomb/AnyKernel3/r8q/dtb
 
