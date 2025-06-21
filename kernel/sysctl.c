@@ -103,9 +103,6 @@
 #if defined CONFIG_TTY
 #include <linux/tty.h>
 #endif
-#if IS_ENABLED(CONFIG_USB)
-#include <linux/usb.h>
-#endif
 
 #ifdef CONFIG_HUGEPAGE_POOL
 #include <linux/hugepage_pool.h>
@@ -1282,17 +1279,6 @@ static struct ctl_table kern_table[] = {
 		.extra1		= &zero,
 		.extra2		= &one,
 	},
-#if IS_ENABLED(CONFIG_USB)
-	{
-		.procname	= "deny_new_usb",
-		.data		= &deny_new_usb,
-		.maxlen		= sizeof(int),
-		.mode		= 0644,
-		.proc_handler	= proc_dointvec_minmax_sysadmin,
-		.extra1		= &zero,
-		.extra2		= &one,
-	},
-#endif
 	{
 		.procname	= "ngroups_max",
 		.data		= &ngroups_max,
