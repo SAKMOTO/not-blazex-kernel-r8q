@@ -32,6 +32,10 @@ bool cpufreq_this_cpu_can_update(struct cpufreq_policy *policy);
 static inline unsigned long map_util_freq(unsigned long util,
 					unsigned long freq, unsigned long cap)
 {
+	util = util * 110 / 100;
+	if (util > cap)
+		util = cap;
+		
 	return freq * util / cap;
 }
 #endif /* CONFIG_CPU_FREQ */
