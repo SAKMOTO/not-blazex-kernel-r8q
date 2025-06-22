@@ -149,7 +149,7 @@ static unsigned long long_max __read_only = LONG_MAX;
 static int one_hundred __read_only = 100;
 static int one_thousand __read_only = 1000;
 #ifdef CONFIG_INCREASE_MAXIMUM_SWAPPINESS
-static int max_swappiness = 1000;
+static int max_swappiness = 200;
 #endif
 #ifdef CONFIG_PRINTK
 static int ten_thousand __read_only = 10000;
@@ -1810,7 +1810,7 @@ static struct ctl_table vm_table[] = {
 		.procname	= "swappiness",
 		.data		= &vm_swappiness,
 		.maxlen		= sizeof(vm_swappiness),
-		.mode		= 0444,
+		.mode		= 0644,
 		.proc_handler	= proc_dointvec_minmax,
 		.extra1		= &zero,
 #ifdef CONFIG_INCREASE_MAXIMUM_SWAPPINESS
