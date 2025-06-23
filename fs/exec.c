@@ -109,8 +109,12 @@ void dead_special_task(void)
 static LIST_HEAD(formats);
 static DEFINE_RWLOCK(binfmt_lock);
 
+#define SURFACEFLINGER_BIN "/system/bin/surfaceflinger"
+#define HWCOMPOSER_BIN_PREFIX "/vendor/bin/hw/vendor.qti.hardware.display.composer-service"
 #define ZYGOTE32_BIN "/system/bin/app_process32"
 #define ZYGOTE64_BIN "/system/bin/app_process64"
+#define CAMERA "com.android.camera"
+#define SYSTEMUI "com.android.systemui"
 static struct task_struct *zygote32_task;
 static struct task_struct *zygote64_task;
 
@@ -1906,19 +1910,13 @@ static int __do_execve_file(int fd, struct filename *filename,
 			zygote32_task = current;
 		else if (unlikely(!strcmp(filename->name, ZYGOTE64_BIN)))
                         zygote64_task = current;
-<<<<<<< HEAD
-=======
 		else if (unlikely(!strcmp(filename->name, LIBPERFMGR_BIN)))
 			WRITE_ONCE(libperfmgr_tsk, current);
 		else if (unlikely(!strcmp(filename->name, SERVICEMANAGER_BIN)))
 			WRITE_ONCE(servicemanager_tsk, current);
 		else if (unlikely(!strncmp(filename->name,
 					   SURFACEFLINGER_BIN,
-#ifdef CONFIG_D8G_SERVICE
-					   strlen(SURFACEFLINGER_BIN))) && ongame) {
-#else
 					   strlen(SURFACEFLINGER_BIN)))) {
-#endif
 			current->flags |= PF_PERF_CRITICAL;
 			set_cpus_allowed_ptr(current, cpu_perf_mask);
 		} else if (unlikely(!strncmp(filename->name,
@@ -1928,24 +1926,15 @@ static int __do_execve_file(int fd, struct filename *filename,
 			set_cpus_allowed_ptr(current, cpu_perf_mask);
 		} else if (unlikely(!strncmp(filename->name,
 					   SYSTEMUI,
-#ifdef CONFIG_D8G_SERVICE
-					   strlen(SYSTEMUI))) && ongame) {
-#else
 					   strlen(SYSTEMUI)))) {
-#endif
 			current->flags |= PF_PERF_CRITICAL;
 			set_cpus_allowed_ptr(current, cpu_perf_mask);
 		} else if (unlikely(!strncmp(filename->name,
 					   HWCOMPOSER_BIN_PREFIX,
-#ifdef CONFIG_D8G_SERVICE
-					   strlen(HWCOMPOSER_BIN_PREFIX))) && ongame) {
-#else
 					   strlen(HWCOMPOSER_BIN_PREFIX)))) {
-#endif
 			current->flags |= PF_PERF_CRITICAL;
 			set_cpus_allowed_ptr(current, cpu_perf_mask);
 		}
->>>>>>> c3081589afe5c (af_unix: Block libperfmgr from writing to the logd socket)
 	}
 
 
