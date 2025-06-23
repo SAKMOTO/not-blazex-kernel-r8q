@@ -750,10 +750,27 @@ static void set_load_weight(struct task_struct *p, bool update_load)
 static DEFINE_MUTEX(uclamp_mutex);
 
 /* Max allowed minimum utilization */
-unsigned int sysctl_sched_uclamp_util_min = SCHED_CAPACITY_SCALE;
+unsigned int sysctl_sched_uclamp_util_min = 128;
 
 /* Max allowed maximum utilization */
 unsigned int sysctl_sched_uclamp_util_max = SCHED_CAPACITY_SCALE;
+
+/*
+ * By default RT tasks run at the maximum performance point/capacity of the
+ * system. Uclamp enforces this by always setting UCLAMP_MIN of RT tasks to
+ * SCHED_CAPACITY_SCALE.
+ *
+ * This knob allows admins to change the default behavior when uclamp is being
+ * used. In battery powered devices, particularly, running at the maximum
+ * capacity and frequency will increase energy consumption and shorten the
+ * battery life.
+ *
+ * This knob only affects RT tasks that their uclamp_se->user_defined == false.
+ *
+ * This knob will not override the system default sched_util_clamp_min defined
+ * above.
+ */
+unsigned int sysctl_sched_uclamp_util_min_rt_default = 0;
 
 /* All clamps are required to be less or equal than these values */
 static struct uclamp_se uclamp_default[UCLAMP_CNT];
@@ -787,11 +804,6 @@ DEFINE_STATIC_KEY_FALSE(sched_uclamp_used);
 static inline unsigned int uclamp_bucket_id(unsigned int clamp_value)
 {
 	return min_t(unsigned int, clamp_value / UCLAMP_BUCKET_DELTA, UCLAMP_BUCKETS - 1);
-}
-
-static inline unsigned int uclamp_bucket_base_value(unsigned int clamp_value)
-{
-	return UCLAMP_BUCKET_DELTA * uclamp_bucket_id(clamp_value);
 }
 
 static inline unsigned int uclamp_none(enum uclamp_id clamp_id)
@@ -833,7 +845,7 @@ static inline void uclamp_idle_reset(struct rq *rq, enum uclamp_id clamp_id,
 	if (!(rq->uclamp_flags & UCLAMP_FLAG_IDLE))
 		return;
 
-	WRITE_ONCE(rq->uclamp[clamp_id].value, clamp_value);
+	uclamp_rq_set(rq, clamp_id, clamp_value);
 }
 
 static inline
@@ -953,8 +965,8 @@ static inline void uclamp_rq_inc_id(struct rq *rq, struct task_struct *p,
 	if (bucket->tasks == 1 || uc_se->value > bucket->value)
 		bucket->value = uc_se->value;
 
-	if (uc_se->value > READ_ONCE(uc_rq->value))
-		WRITE_ONCE(uc_rq->value, uc_se->value);
+	if (uc_se->value > uclamp_rq_get(rq, clamp_id))
+		uclamp_rq_set(rq, clamp_id, uc_se->value);
 }
 
 /*
@@ -1020,7 +1032,7 @@ static inline void uclamp_rq_dec_id(struct rq *rq, struct task_struct *p,
 	if (likely(bucket->tasks))
 		return;
 
-	rq_clamp = READ_ONCE(uc_rq->value);
+	rq_clamp = uclamp_rq_get(rq, clamp_id);
 	/*
 	 * Defensive programming: this should never happen. If it happens,
 	 * e.g. due to future modification, warn and fixup the expected value.
@@ -1028,7 +1040,7 @@ static inline void uclamp_rq_dec_id(struct rq *rq, struct task_struct *p,
 	SCHED_WARN_ON(bucket->value > rq_clamp);
 	if (bucket->value >= rq_clamp) {
 		bkt_clamp = uclamp_rq_max_value(rq, clamp_id, uc_se->value);
-		WRITE_ONCE(uc_rq->value, bkt_clamp);
+		uclamp_rq_set(rq, clamp_id, bkt_clamp);
 	}
 }
 
@@ -1076,6 +1088,23 @@ static inline void uclamp_rq_dec(struct rq *rq, struct task_struct *p)
 		uclamp_rq_dec_id(rq, p, clamp_id);
 }
 
+static inline void uclamp_rq_reinc_id(struct rq *rq, struct task_struct *p,
+				      enum uclamp_id clamp_id)
+{
+	if (!p->uclamp[clamp_id].active)
+		return;
+
+	uclamp_rq_dec_id(rq, p, clamp_id);
+	uclamp_rq_inc_id(rq, p, clamp_id);
+
+	/*
+	 * Make sure to clear the idle flag if we've transiently reached 0
+	 * active tasks on rq.
+	 */
+	if (clamp_id == UCLAMP_MAX && (rq->uclamp_flags & UCLAMP_FLAG_IDLE))
+		rq->uclamp_flags &= ~UCLAMP_FLAG_IDLE;
+}
+
 static inline void
 uclamp_update_active(struct task_struct *p)
 {
@@ -1099,12 +1128,8 @@ uclamp_update_active(struct task_struct *p)
 	 * affecting a valid clamp bucket, the next time it's enqueued,
 	 * it will already see the updated clamp bucket value.
 	 */
-	for_each_clamp_id(clamp_id) {
-		if (p->uclamp[clamp_id].active) {
-			uclamp_rq_dec_id(rq, p, clamp_id);
-			uclamp_rq_inc_id(rq, p, clamp_id);
-		}
-	}
+	for_each_clamp_id(clamp_id)
+		uclamp_rq_reinc_id(rq, p, clamp_id);
 
 	task_rq_unlock(rq, p, &rf);
 }
@@ -1200,17 +1225,24 @@ done:
 static int uclamp_validate(struct task_struct *p,
 			   const struct sched_attr *attr)
 {
-	unsigned int lower_bound = p->uclamp_req[UCLAMP_MIN].value;
-	unsigned int upper_bound = p->uclamp_req[UCLAMP_MAX].value;
+	int util_min = p->uclamp_req[UCLAMP_MIN].value;
+	int util_max = p->uclamp_req[UCLAMP_MAX].value;
 
-	if (attr->sched_flags & SCHED_FLAG_UTIL_CLAMP_MIN)
-		lower_bound = attr->sched_util_min;
-	if (attr->sched_flags & SCHED_FLAG_UTIL_CLAMP_MAX)
-		upper_bound = attr->sched_util_max;
+	if (attr->sched_flags & SCHED_FLAG_UTIL_CLAMP_MIN) {
+		util_min = attr->sched_util_min;
 
-	if (lower_bound > upper_bound)
-		return -EINVAL;
-	if (upper_bound > SCHED_CAPACITY_SCALE)
+		if (util_min + 1 > SCHED_CAPACITY_SCALE + 1)
+			return -EINVAL;
+	}
+
+	if (attr->sched_flags & SCHED_FLAG_UTIL_CLAMP_MAX) {
+		util_max = attr->sched_util_max;
+
+		if (util_max + 1 > SCHED_CAPACITY_SCALE + 1)
+			return -EINVAL;
+	}
+
+	if (util_min != -1 && util_max != -1 && util_min > util_max)
 		return -EINVAL;
 
 	/*
@@ -1225,43 +1257,68 @@ static int uclamp_validate(struct task_struct *p,
 	return 0;
 }
 
+static bool uclamp_reset(const struct sched_attr *attr,
+			 enum uclamp_id clamp_id,
+			 struct uclamp_se *uc_se)
+{
+	/* Reset on sched class change for a non user-defined clamp value. */
+	if (likely(!(attr->sched_flags & SCHED_FLAG_UTIL_CLAMP)) &&
+	    !uc_se->user_defined)
+		return true;
+
+	/* Reset on sched_util_{min,max} == -1. */
+	if (clamp_id == UCLAMP_MIN &&
+	    attr->sched_flags & SCHED_FLAG_UTIL_CLAMP_MIN &&
+	    attr->sched_util_min == -1) {
+		return true;
+	}
+
+	if (clamp_id == UCLAMP_MAX &&
+	    attr->sched_flags & SCHED_FLAG_UTIL_CLAMP_MAX &&
+	    attr->sched_util_max == -1) {
+		return true;
+	}
+
+	return false;
+}
+
 static void __setscheduler_uclamp(struct task_struct *p,
 				  const struct sched_attr *attr)
 {
 	enum uclamp_id clamp_id;
 
-	/*
-	 * On scheduling class change, reset to default clamps for tasks
-	 * without a task-specific value.
-	 */
 	for_each_clamp_id(clamp_id) {
 		struct uclamp_se *uc_se = &p->uclamp_req[clamp_id];
-		unsigned int clamp_value = uclamp_none(clamp_id);
+		unsigned int value;
 
-		/* Keep using defined clamps across class changes */
-		if (uc_se->user_defined)
+
+		if (!uclamp_reset(attr, clamp_id, uc_se))
 			continue;
 
-		/* By default, RT tasks always get 100% boost */
-		if (sched_feat(SUGOV_RT_MAX_FREQ) &&
-			       unlikely(rt_task(p) &&
-			       clamp_id == UCLAMP_MIN)) {
+		/*
+		 * RT by default have a 100% boost value that could be modified
+		 * at runtime.
+		 */
+		if (unlikely(rt_task(p) && clamp_id == UCLAMP_MIN))
+			value = sysctl_sched_uclamp_util_min_rt_default;
+		else
+			value = uclamp_none(clamp_id);
 
-			clamp_value = uclamp_none(UCLAMP_MAX);
-		}
+		uclamp_se_set(uc_se, value, false);
 
-		uclamp_se_set(uc_se, clamp_value, false);
 	}
 
 	if (likely(!(attr->sched_flags & SCHED_FLAG_UTIL_CLAMP)))
 		return;
 
-	if (attr->sched_flags & SCHED_FLAG_UTIL_CLAMP_MIN) {
+	if (attr->sched_flags & SCHED_FLAG_UTIL_CLAMP_MIN &&
+	    attr->sched_util_min != -1) {
 		uclamp_se_set(&p->uclamp_req[UCLAMP_MIN],
 			      attr->sched_util_min, true);
 	}
 
-	if (attr->sched_flags & SCHED_FLAG_UTIL_CLAMP_MAX) {
+	if (attr->sched_flags & SCHED_FLAG_UTIL_CLAMP_MAX &&
+	    attr->sched_util_max != -1) {
 		uclamp_se_set(&p->uclamp_req[UCLAMP_MAX],
 			      attr->sched_util_max, true);
 	}
@@ -1297,17 +1354,32 @@ unsigned int uclamp_task(struct task_struct *p)
 
 bool uclamp_boosted(struct task_struct *p)
 {
-	return uclamp_eff_value(p, UCLAMP_MIN) > 0;
-}
-
-bool uclamp_latency_sensitive(struct task_struct *p)
-{
-#ifdef CONFIG_UCLAMP_TASK_GROUP
 	struct cgroup_subsys_state *css = task_css(p, cpu_cgrp_id);
 	struct task_group *tg;
 
 	if (!css)
 		return false;
+
+	if (!strlen(css->cgroup->kn->name))
+		return 0;
+
+	tg = container_of(css, struct task_group, css);
+
+	return tg->boosted;
+}
+
+bool uclamp_latency_sensitive(struct task_struct *p)
+{
+#ifdef CONFIG_UCLAMP_TASK_GROUP
+	struct cgroup_subsys_state *css = task_css(p, cpuset_cgrp_id);
+	struct task_group *tg;
+
+	if (!css)
+		return false;
+
+	if (!strlen(css->cgroup->kn->name))
+		return 0;
+
 	tg = container_of(css, struct task_group, css);
 
 	return tg->latency_sensitive;
@@ -1336,8 +1408,6 @@ static void __init init_uclamp(void)
 	struct uclamp_se uc_max = {};
 	enum uclamp_id clamp_id;
 	int cpu;
-
-	mutex_init(&uclamp_mutex);
 
 	for_each_possible_cpu(cpu)
 		init_uclamp_rq(cpu_rq(cpu));
@@ -5155,6 +5225,10 @@ recheck:
 		/* Normal users shall not reset the sched_reset_on_fork flag: */
 		if (p->sched_reset_on_fork && !reset_on_fork)
 			return -EPERM;
+
+		/* Can't change util-clamps */
+		if (attr->sched_flags & SCHED_FLAG_UTIL_CLAMP)
+			return -EPERM;
 	}
 
 	if (user) {
@@ -7834,6 +7908,10 @@ cpu_cgroup_css_alloc(struct cgroup_subsys_state *parent_css)
 	return &tg->css;
 }
 
+#ifdef CONFIG_UCLAMP_ASSIST
+static void uclamp_set(struct cgroup_subsys_state *css);
+#endif
+
 /* Expose task group only after completing cgroup initialization */
 static int cpu_cgroup_css_online(struct cgroup_subsys_state *css)
 {
@@ -7850,6 +7928,9 @@ static int cpu_cgroup_css_online(struct cgroup_subsys_state *css)
 	cpu_util_update_eff(css);
 	rcu_read_unlock();
 	mutex_unlock(&uclamp_mutex);
+#ifdef CONFIG_UCLAMP_ASSIST
+	uclamp_set(css);
+#endif
 #endif
 
 	return 0;
@@ -8021,6 +8102,40 @@ capacity_from_percent(char *buf)
 	return req;
 }
 
+#ifdef CONFIG_UCLAMP_ASSIST
+static void cpu_uclamp_write_wrapper(struct cgroup_subsys_state *css, char *buf,
+					enum uclamp_id clamp_id)
+{
+	struct uclamp_request req;
+	struct task_group *tg;
+
+	req = capacity_from_percent(buf);
+	if (req.ret)
+		return;
+
+	static_branch_enable(&sched_uclamp_used);
+
+	mutex_lock(&uclamp_mutex);
+	rcu_read_lock();
+
+        tg = css_tg(css);
+	if (tg->uclamp_req[clamp_id].value != req.util)
+		uclamp_se_set(&tg->uclamp_req[clamp_id], req.util, false);
+
+	/*
+	 * Because of not recoverable conversion rounding we keep track of the
+	 * exact requested value
+	 */
+	tg->uclamp_pct[clamp_id] = req.percent;
+
+	/* Update effective clamps to track the most restrictive value */
+	cpu_util_update_eff(css);
+
+	rcu_read_unlock();
+	mutex_unlock(&uclamp_mutex);
+}
+#endif
+
 static ssize_t cpu_uclamp_write(struct kernfs_open_file *of, char *buf,
 				size_t nbytes, loff_t off,
 				enum uclamp_id clamp_id)
@@ -8125,6 +8240,78 @@ static u64 cpu_uclamp_ls_read_u64(struct cgroup_subsys_state *css,
 
 	return (u64) tg->latency_sensitive;
 }
+
+static int cpu_uclamp_boost_write_u64(struct cgroup_subsys_state *css,
+				   struct cftype *cftype, u64 boosted)
+{
+	struct task_group *tg;
+
+	if (boosted > 1)
+		return -EINVAL;
+	tg = css_tg(css);
+	tg->boosted = (unsigned int) boosted;
+
+	return 0;
+}
+
+static u64 cpu_uclamp_boost_read_u64(struct cgroup_subsys_state *css,
+				  struct cftype *cft)
+{
+	struct task_group *tg = css_tg(css);
+
+	return (u64) tg->boosted;
+}
+
+#ifdef CONFIG_UCLAMP_ASSIST
+struct uclamp_param {
+	char *name;
+	char uclamp_min[3];
+	char uclamp_max[3];
+	u64  uclamp_latency_sensitive;
+	u64  uclamp_boosted;
+};
+
+static void uclamp_set(struct cgroup_subsys_state *css)
+{
+	int i;
+
+	static struct uclamp_param tgts[] = {
+		{"top-app",             "0", "max",  1,  1},
+		{"rt",                  "0", "max",  0,  0},
+		{"nnapi-hal",           "1", "max",  1,  0},
+		{"foreground",          "0",  "80",  0,  0},
+		{"camera-daemon",       "0", "max",  0,  0},
+		{"system",              "0", "max",  0,  0},
+		{"dex2oat",             "0",  "30",  0,  0},
+		{"background",          "0",  "30",  0,  0},
+		{"system-background",   "0",  "50",  0,  0},
+	};
+
+	if(!css->cgroup->kn)
+		return;
+
+	for (i = 0; i < ARRAY_SIZE(tgts); i++) {
+		struct uclamp_param tgt = tgts[i];
+
+		if (!strcmp(css->cgroup->kn->name, tgt.name)) {
+			cpu_uclamp_write_wrapper(css, tgt.uclamp_min,
+						UCLAMP_MIN);
+			cpu_uclamp_write_wrapper(css, tgt.uclamp_max,
+						UCLAMP_MAX);
+			cpu_uclamp_ls_write_u64(css, NULL,
+						tgt.uclamp_latency_sensitive);
+			cpu_uclamp_boost_write_u64(css, NULL,
+						tgt.uclamp_boosted);
+
+			pr_info("uclamp_assist: setting values for %s: uclamp_min=%s uclamp_max=%s uclamp_latency_sensitive=%d uclamp_boosted=%d\n",
+				tgt.name, tgt.uclamp_min, tgt.uclamp_max,tgt.uclamp_latency_sensitive, tgt.uclamp_boosted);
+			return;
+		}
+	}
+
+}
+#endif /* CONFIG_UCLAMP_ASSIST */
+
 #endif /* CONFIG_UCLAMP_TASK_GROUP */
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
@@ -8490,6 +8677,12 @@ static struct cftype cpu_legacy_files[] = {
 		.flags = CFTYPE_NOT_ON_ROOT,
 		.read_u64 = cpu_uclamp_ls_read_u64,
 		.write_u64 = cpu_uclamp_ls_write_u64,
+	},
+	{
+		.name = "uclamp.boosted",
+		.flags = CFTYPE_NOT_ON_ROOT,
+		.read_u64 = cpu_uclamp_boost_read_u64,
+		.write_u64 = cpu_uclamp_boost_write_u64,
 	},
 #endif
 	{ }	/* Terminate */

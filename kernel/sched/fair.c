@@ -168,7 +168,8 @@ unsigned int capacity_margin				= 1280;
 unsigned int sched_capacity_margin_up[NR_CPUS] = {
 			[0 ... NR_CPUS-1] = 1078}; /* ~5% margin */
 unsigned int sched_capacity_margin_down[NR_CPUS] = {
-			[0 ... NR_CPUS-1] = 1205}; /* ~15% margin */
+			1024, 1024, 1024, 1024, 1796, 1796, 1796, 1442
+}; /* Not used for small, ~43% margin for big, ~29% for prime */
 
 #ifdef CONFIG_SCHED_WALT
 /* 1ms default for 20ms window size scaled to 1024 */
@@ -3941,8 +3942,7 @@ static inline bool task_fits_capacity(struct task_struct *p,
 	unsigned int margin;
 
 	/*
-	 * Derive upmigration/downmigrate margin wrt the src/dest
-	 * CPU.
+	 * Derive upmigration/downmigrate margin wrt the src/dest CPU.
 	 */
 	if (capacity_orig_of(task_cpu(p)) > capacity_orig_of(cpu))
 		margin = sched_capacity_margin_down[cpu];
@@ -3964,7 +3964,7 @@ static inline bool task_fits_max(struct task_struct *p, int cpu)
 	if (is_min_capacity_cpu(cpu)) {
 		if (task_boost_policy(p) == SCHED_BOOST_ON_BIG ||
 			task_boost > 0 ||
-			schedtune_task_boost(p) > 0 ||
+			uclamp_boosted(p) ||
 			walt_should_kick_upmigrate(p, cpu))
 			return false;
 	} else { /* mid cap cpu */
@@ -6923,7 +6923,7 @@ static int get_start_cpu(struct task_struct *p)
 	struct root_domain *rd = cpu_rq(smp_processor_id())->rd;
 	int start_cpu = rd->min_cap_orig_cpu;
 	int task_boost = per_task_boost(p);
-	bool boosted = schedtune_task_boost(p) > 0 ||
+	bool boosted = uclamp_boosted(p) ||
 			task_boost_policy(p) == SCHED_BOOST_ON_BIG ||
 			task_boost == TASK_BOOST_ON_MID;
 	bool task_skip_min = task_skip_min_cpu(p);
@@ -7782,7 +7782,7 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu,
 	u64 start_t = 0;
 	int delta = 0;
 	int task_boost = per_task_boost(p);
-	int boosted = (schedtune_task_boost(p) > 0) || (task_boost > 0);
+	int boosted = uclamp_boosted(p) || (task_boost > 0);
 	int start_cpu;
 
 	if (is_many_wakeup(sibling_count_hint) && prev_cpu != cpu &&
