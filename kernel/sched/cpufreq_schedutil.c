@@ -217,10 +217,10 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 		return l_freq;
 
 	/*
-	 * Use the frequency step below if the calculated frequency is <10%
+	 * Use the frequency step below if the calculated frequency is <5%
 	 * higher than it.
 	 */
-	if (mult_frac(100, freq - h_freq, l_freq - h_freq) < 10)
+	if (mult_frac(100, freq - h_freq, l_freq - h_freq) < 5)
 		return h_freq;
 
 	return l_freq;
@@ -486,7 +486,10 @@ static unsigned long sugov_iowait_apply(struct sugov_cpu *sg_cpu, u64 time,
 	 * into the same scale so we can compare.
 	 */
 	boost = (sg_cpu->iowait_boost * max) >> SCHED_CAPACITY_SHIFT;
-	return max(boost, util);
+	boost = max(boost, util);
+	boost = uclamp_rq_util_with(cpu_rq(sg_cpu->cpu), boost, NULL);
+
+	return boost;
 }
 
 /*
