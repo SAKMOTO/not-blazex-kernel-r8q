@@ -4429,7 +4429,6 @@ static inline int set_compress_context(struct inode *inode)
 static inline bool f2fs_disable_compressed_file(struct inode *inode)
 {
 	struct f2fs_inode_info *fi = F2FS_I(inode);
-	u32 i_compr_blocks;
 
 	if (!f2fs_compressed_file(inode))
 		return true;
