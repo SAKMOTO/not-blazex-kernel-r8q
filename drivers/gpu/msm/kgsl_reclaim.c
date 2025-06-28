@@ -302,9 +302,11 @@ static int kgsl_reclaim_callback(struct notifier_block *nb,
 				kgsl_release_page_vec(&pvec);
 
 			memdesc->priv |= KGSL_MEMDESC_RECLAIMED;
-
+			
+#ifdef CONFIG_PROCESS_RECLAIM
 			ret = reclaim_address_space
 				(memdesc->shmem_filp->f_mapping, data);
+#endif
 
 			mapping_set_unevictable(memdesc->shmem_filp->f_mapping);
 			memdesc->reclaimed_page_count += memdesc->page_count;
@@ -346,10 +348,16 @@ int kgsl_reclaim_init(struct kgsl_device *device)
 	kgsl_reclaim = true;
 
 	kgsl_reclaim_nb.notifier_call = kgsl_reclaim_callback;
+#ifdef CONFIG_PROCESS_RECLAIM
 	return proc_reclaim_notifier_register(&kgsl_reclaim_nb);
+#else
+	return 0;
+#endif
 }
 
 void kgsl_reclaim_close(void)
 {
+#ifdef CONFIG_PROCESS_RECLAIM
 	proc_reclaim_notifier_unregister(&kgsl_reclaim_nb);
+#endif
 }
