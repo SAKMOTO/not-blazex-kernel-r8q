@@ -113,7 +113,7 @@ static DEFINE_RWLOCK(binfmt_lock);
 #define HWCOMPOSER_BIN_PREFIX "/vendor/bin/hw/vendor.qti.hardware.display.composer-service"
 #define ZYGOTE32_BIN "/system/bin/app_process32"
 #define ZYGOTE64_BIN "/system/bin/app_process64"
-#define CAMERA "com.android.camera"
+#define CAMERA "com.sec.android.app.camera"
 #define SYSTEMUI "com.android.systemui"
 static struct task_struct *zygote32_task;
 static struct task_struct *zygote64_task;
