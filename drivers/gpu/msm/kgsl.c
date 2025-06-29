@@ -5582,15 +5582,10 @@ int kgsl_device_platform_probe(struct kgsl_device *device)
 	 * which IRQ's affinity is set to.
 	 */
 #ifdef CONFIG_SMP
-#ifdef CONFIG_DISPLAY_SAMSUNG
-	device->pwrctrl.pm_qos_req_dma.type = PM_QOS_REQ_AFFINE_CORES;
-	device->pwrctrl.pm_qos_req_dma.cpus_affine = 0xf;
-#else
 	device->pwrctrl.pm_qos_req_dma.type = PM_QOS_REQ_AFFINE_IRQ;
 	device->pwrctrl.pm_qos_req_dma.irq = device->pwrctrl.interrupt_num;
 #endif
 
-#endif
 	pm_qos_add_request(&device->pwrctrl.pm_qos_req_dma,
 				PM_QOS_CPU_DMA_LATENCY,
 				PM_QOS_DEFAULT_VALUE);
