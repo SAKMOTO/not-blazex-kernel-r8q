@@ -531,7 +531,7 @@ unsigned long walt_cpu_util(int cpu, unsigned long util_cfs,
 static unsigned long waltgov_get_util(struct waltgov_cpu *wg_cpu)
 {
 	struct rq *rq = cpu_rq(wg_cpu->cpu);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 420)
 	unsigned long max = arch_scale_cpu_capacity(NULL, wg_cpu->cpu);
 #else
 	unsigned long max = arch_scale_cpu_capacity(wg_cpu->cpu);
@@ -1217,7 +1217,7 @@ static ssize_t target_loads_show(struct gov_attr_set *attr_set, char *buf)
 			if (i & 0x1)
 				tmp = map_util_freq(tunables->target_loads[i],
 							wg_policy->policy->cpuinfo.max_freq,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 420)
 							wg_policy->max);
 #else
 							wg_policy->max,wg_policy->tunables->exp_util);
@@ -1742,7 +1742,7 @@ struct cpufreq_governor *cpufreq_default_governor(void)
 }
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 420)
 static int __init waltgov_register(void)
 {
 	return cpufreq_register_governor(&walt_gov);
