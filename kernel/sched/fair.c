@@ -73,9 +73,10 @@ walt_dec_cfs_rq_stats(struct cfs_rq *cfs_rq, struct task_struct *p) {}
  *  run vmstat and monitor the context-switches (cs) field)
  *
  * (default: 6ms * (1 + ilog(ncpus)), units: nanoseconds)
+ * (not default: 12ms * (1 + ilog(ncpus)), units: nanoseconds)
  */
-unsigned int sysctl_sched_latency			= 6000000ULL;
-unsigned int normalized_sysctl_sched_latency		= 6000000ULL;
+unsigned int sysctl_sched_latency			= 12000000ULL;
+unsigned int normalized_sysctl_sched_latency		= 12000000ULL;
 
 /*
  * Enable/disable honoring sync flag in energy-aware wakeups.
@@ -104,14 +105,15 @@ enum sched_tunable_scaling sysctl_sched_tunable_scaling = SCHED_TUNABLESCALING_L
  * Minimal preemption granularity for CPU-bound tasks:
  *
  * (default: 0.75 msec * (1 + ilog(ncpus)), units: nanoseconds)
+ * (not default: 3 msec * (1 + ilog(ncpus)), units: nanoseconds)
  */
-unsigned int sysctl_sched_min_granularity		= 750000ULL;
-unsigned int normalized_sysctl_sched_min_granularity	= 750000ULL;
+unsigned int sysctl_sched_min_granularity		= 3000000ULL;
+unsigned int normalized_sysctl_sched_min_granularity	= 3000000ULL;
 
 /*
  * This value is kept at sysctl_sched_latency/sysctl_sched_min_granularity
  */
-static unsigned int sched_nr_latency = 8;
+static unsigned int sched_nr_latency = 5; // 8
 
 /*
  * After fork, child runs first. If set to 0 (default) then
@@ -131,7 +133,7 @@ unsigned int sysctl_sched_child_runs_first __read_mostly;
 unsigned int sysctl_sched_wakeup_granularity		= 1000000UL;
 unsigned int normalized_sysctl_sched_wakeup_granularity	= 1000000UL;
 
-const_debug unsigned int sysctl_sched_migration_cost	= 500000UL;
+const_debug unsigned int sysctl_sched_migration_cost	= -1; //500000UL
 DEFINE_PER_CPU_READ_MOSTLY(int, sched_load_boost);
 
 #ifdef CONFIG_SMP
@@ -8645,36 +8647,14 @@ struct lb_env {
 };
 
 /*
- * Is this task likely cache-hot:
+ * Task hotness check disabled:
+ * Always return 0 to allow migration of all tasks regardless of cache state.
+ * This is intentional for schedulers like WALT + CASS where core selection
+ * is guided by capacity and energy, not cache locality.
  */
 static int task_hot(struct task_struct *p, struct lb_env *env)
 {
-	s64 delta;
-
-	lockdep_assert_held(&env->src_rq->lock);
-
-	if (p->sched_class != &fair_sched_class)
-		return 0;
-
-	if (unlikely(p->policy == SCHED_IDLE))
-		return 0;
-
-	/*
-	 * Buddy candidates are cache hot:
-	 */
-	if (sched_feat(CACHE_HOT_BUDDY) && env->dst_rq->nr_running &&
-			(&p->se == cfs_rq_of(&p->se)->next ||
-			 &p->se == cfs_rq_of(&p->se)->last))
-		return 1;
-
-	if (sysctl_sched_migration_cost == -1)
-		return 1;
-	if (sysctl_sched_migration_cost == 0)
-		return 0;
-
-	delta = rq_clock_task(env->src_rq) - p->se.exec_start;
-
-	return delta < (s64)sysctl_sched_migration_cost;
+	return 0;
 }
 
 #ifdef CONFIG_NUMA_BALANCING
