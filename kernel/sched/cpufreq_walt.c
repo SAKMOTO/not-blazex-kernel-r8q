@@ -1529,11 +1529,13 @@ static int waltgov_init(struct cpufreq_policy *policy)
 	/* State should be equivalent to EXIT */
 	if (policy->governor_data)
 		return -EBUSY;
-
+		
+#if 0
 	cpufreq_enable_fast_switch(policy);
 
 	if (policy->fast_switch_possible && !policy->fast_switch_enabled)
 		BUG_ON(1);
+#endif
 
 	wg_policy = waltgov_policy_alloc(policy);
 	if (!wg_policy) {
