@@ -206,6 +206,14 @@ static const struct max77705_muic_vps_data muic_vps_table[] = {
 		.chgtyp		= CHGTYP_DEDICATED_CHARGER,
 		.muic_switch	= COM_OPEN,
 		.vps_name	= "AFC Charger",
+		.attached_dev	= ATTACHED_DEV_AFC_CHARGER_12V_MUIC,
+	},
+	{
+		.adc		= MAX77705_UIADC_OPEN,
+		.vbvolt		= VB_HIGH,
+		.chgtyp		= CHGTYP_DEDICATED_CHARGER,
+		.muic_switch	= COM_OPEN,
+		.vps_name	= "AFC Charger",
 		.attached_dev	= ATTACHED_DEV_AFC_CHARGER_9V_MUIC,
 	},
 	{
@@ -215,6 +223,14 @@ static const struct max77705_muic_vps_data muic_vps_table[] = {
 		.muic_switch	= COM_OPEN,
 		.vps_name	= "AFC Charger",
 		.attached_dev	= ATTACHED_DEV_AFC_CHARGER_5V_MUIC,
+	},
+	{
+		.adc		= MAX77705_UIADC_OPEN,
+		.vbvolt		= VB_HIGH,
+		.chgtyp		= CHGTYP_DEDICATED_CHARGER,
+		.muic_switch	= COM_OPEN,
+		.vps_name	= "QC Charger",
+		.attached_dev	= ATTACHED_DEV_QC_CHARGER_12V_MUIC,
 	},
 	{
 		.adc		= MAX77705_UIADC_OPEN,
@@ -1114,8 +1130,10 @@ static int max77705_muic_handle_detach(struct max77705_muic_data *muic_data, int
 	case ATTACHED_DEV_UNOFFICIAL_TA_MUIC:
 	case ATTACHED_DEV_AFC_CHARGER_5V_MUIC:
 	case ATTACHED_DEV_AFC_CHARGER_9V_MUIC:
+	case ATTACHED_DEV_AFC_CHARGER_12V_MUIC:
 	case ATTACHED_DEV_QC_CHARGER_5V_MUIC:
 	case ATTACHED_DEV_QC_CHARGER_9V_MUIC:
+	case ATTACHED_DEV_QC_CHARGER_12V_MUIC:
 		if ((muic_data->status3 & BC_STATUS_VBUSDET_MASK) > 0 && !muic_data->is_irq_vbusdet_high) {
 			/* W/A for chgtype 0 irq when CC pin is only detached */
 			pr_info("%s Vbus is high, keep the current state(%d)\n", __func__,
@@ -1200,8 +1218,10 @@ static int max77705_muic_logically_detach(struct max77705_muic_data *muic_data,
 		break;
 	case ATTACHED_DEV_TA_MUIC:
 #if defined(CONFIG_HV_MUIC_MAX77705_AFC)
+        case ATTACHED_DEV_AFC_CHARGER_12V_MUIC:
 	case ATTACHED_DEV_AFC_CHARGER_9V_MUIC:
 	case ATTACHED_DEV_AFC_CHARGER_5V_MUIC:
+	case ATTACHED_DEV_QC_CHARGER_12V_MUIC:
 	case ATTACHED_DEV_QC_CHARGER_9V_MUIC:
 	case ATTACHED_DEV_QC_CHARGER_5V_MUIC:
 #endif
@@ -1881,6 +1901,10 @@ static int max77705_muic_afc_set_voltage(int voltage)
 	case ATTACHED_DEV_QC_CHARGER_9V_MUIC:
 		now_voltage = 9;
 		break;
+	case ATTACHED_DEV_AFC_CHARGER_12V_MUIC:
+	case ATTACHED_DEV_QC_CHARGER_12V_MUIC:
+		now_voltage = 12;
+		break;
 	default:
 		break;
 	}
@@ -1897,8 +1921,14 @@ static int max77705_muic_afc_set_voltage(int voltage)
 	case ATTACHED_DEV_AFC_CHARGER_9V_MUIC:
 		max77705_muic_afc_hv_set(muic_data, voltage);
 		break;
+	case ATTACHED_DEV_AFC_CHARGER_12V_MUIC:
+		max77705_muic_afc_hv_set(muic_data, voltage);
+		break;
 	case ATTACHED_DEV_QC_CHARGER_5V_MUIC:
 	case ATTACHED_DEV_QC_CHARGER_9V_MUIC:
+		max77705_muic_qc_hv_set(muic_data, voltage);
+		break;
+	case ATTACHED_DEV_QC_CHARGER_12V_MUIC:
 		max77705_muic_qc_hv_set(muic_data, voltage);
 		break;
 	default:
@@ -1941,8 +1971,10 @@ static void max77705_muic_detect_dev_hv_work(struct work_struct *work)
 		switch (muic_data->attached_dev) {
 		case ATTACHED_DEV_AFC_CHARGER_5V_MUIC:
 		case ATTACHED_DEV_AFC_CHARGER_9V_MUIC:
+		case ATTACHED_DEV_AFC_CHARGER_12V_MUIC:
 		case ATTACHED_DEV_QC_CHARGER_5V_MUIC:
 		case ATTACHED_DEV_QC_CHARGER_9V_MUIC:
+		case ATTACHED_DEV_QC_CHARGER_12V_MUIC:
 			pr_info("%s high voltage value is changed\n", __func__);
 			break;
 		default:
