@@ -4,7 +4,7 @@
 #include "../util/env.h"
 #include "../util/util.h"
 #include "../util/debug.h"
-
+/*
 const char *const arm_triplets[] = {
 	"arm-eabi-",
 	"arm-linux-androideabi-",
@@ -16,7 +16,7 @@ const char *const arm_triplets[] = {
 	"arm-none-eabi-",
 	NULL
 };
-
+*/
 const char *const arm64_triplets[] = {
 	"aarch64-linux-android-",
 	"aarch64-linux-gnu-",

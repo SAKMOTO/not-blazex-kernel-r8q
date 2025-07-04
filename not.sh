@@ -2,15 +2,13 @@
 LLVM_PATH="/home/skye/bomb/clang/bin/"
 TC_PATH="/home/skye/bomb/clang/bin/"
 TC2_PATH="/home/skye/bomb/clangsd/bin/"
-GCC_PATH="/usr/bin/"
-LLD_PATH="/usr/bin/"
+LLD_PATH="/home/skye/bomb/clangsd/bin/"
 KERNEL_NAME="not_kernel-CYHTM-"
 MAKE="./makeparallel"
-HOST_BUILD_ENV="ARCH=arm64 CC=${TC_PATH}clang CROSS_COMPILE=${TC_PATH}aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 PATH=$LLVM_PATH:$LLD_PATH:$PATH"  
+HOST_BUILD_ENV="ARCH=arm64 CC=${TC2_PATH}clang CROSS_COMPILE=${TC2_PATH}aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 PATH=$LLVM_PATH:$LLD_PATH:$PATH"  
 KERNEL_MAKE_ENV="DTC_EXT=$(pwd)/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
 KERNEL_BUILD_ENV="ARCH=arm64 CROSS_COMPILE=${TC2_PATH}aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 PATH=$LLVM_PATH:$LLD_PATH:$PATH"  
 KERNEL_TUNE_FLAGS="-march=armv8.2-a -mtune=cortex-a77"
-KBUILD_CFLAGS_VDSO32="-march=armv7-a -mtune=cortex-a55"
 
 rm -rf /home/skye/bomb/out/arch/arm64/boot/Image
 rm -rf /home/skye/bomb/AnyKernel3/dtb
@@ -24,16 +22,14 @@ echo "*****************************************"
 echo "*****************************************"
 
 make -j12 O=/home/skye/bomb/out $KERNEL_MAKE_ENV $KERNEL_BUILD_ENV KCFLAGS="$KERNEL_TUNE_FLAGS" \
-                                KBUILD_CFLAGS_VDSO32="-march=armv7-a -mtune=cortex-a55" \
                                 CC="${TC2_PATH}clang --target=aarch64-linux-gnu" dtbo.img
-                                
+                               
 DTBO_OUT="/home/skye/bomb/out/arch/arm64/boot"
 DTB_OUT="/home/skye/bomb/out/arch/arm64/boot/dts/vendor/qcom"
 cp $DTBO_OUT/dtbo.img /home/skye/bomb/AnyKernel3/r8q/dtbo.img
 cat $DTB_OUT/*.dtb > /home/skye/bomb/AnyKernel3/r8q/dtb
 
 make -j12 O=/home/skye/bomb/out $KERNEL_MAKE_ENV $KERNEL_BUILD_ENV KCFLAGS="$KERNEL_TUNE_FLAGS" \
-                                KBUILD_CFLAGS_VDSO32="-march=armv7-a -mtune=cortex-a55" \
                                 CC="${TC2_PATH}clang --target=aarch64-linux-gnu" Image
                                 
 IMAGE="/home/skye/bomb/out/arch/arm64/boot/Image"
