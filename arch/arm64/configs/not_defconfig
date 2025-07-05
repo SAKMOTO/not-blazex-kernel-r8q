@@ -1431,14 +1431,6 @@ CONFIG_WATCHDOG_HANDLE_BOOT_ENABLED=y
 CONFIG_SOFT_WATCHDOG=y
 
 #
-# PCI-based Watchdog Cards
-#
-
-#
-# USB-based Watchdog Cards
-#
-
-#
 # Watchdog Pretimeout Governors
 #
 CONFIG_SSB_POSSIBLE=y
@@ -1517,14 +1509,6 @@ CONFIG_CAMERA_STREAMOFF_CHECK=y
 CONFIG_SAMSUNG_FRONT_FIXED_FOCUS=y
 
 #
-# Qualcomm Technologies, Inc. Demux device config
-#
-
-#
-# Qualcomm Technologies, Inc. Demux device config
-#
-
-#
 # Supported MMC/SDIO adapters
 #
 CONFIG_RADIO_ADAPTERS=y
@@ -1543,75 +1527,11 @@ CONFIG_VIDEOBUF2_VMALLOC=y
 CONFIG_MEDIA_SUBDRV_AUTOSELECT=y
 
 #
-# Audio decoders, processors and mixers
-#
-
-#
-# RDS decoders
-#
-
-#
-# Video decoders
-#
-
-#
-# Video and audio decoders
-#
-
-#
-# Video encoders
-#
-
-#
-# Camera sensor devices
-#
-
-#
-# Flash devices
-#
-
-#
-# Video improvement chips
-#
-
-#
-# Audio/Video compression chips
-#
-
-#
-# SDR tuner chips
-#
-
-#
-# Miscellaneous helper chips
-#
-
-#
-# Sensors used on soc_camera driver
-#
-
-#
-# Media SPI Adapters
-#
-
-#
-# Tools to develop new frontends
-#
-
-#
 # Graphics support
 #
 CONFIG_DRM=y
 CONFIG_DRM_MIPI_DSI=y
 CONFIG_DRM_KMS_HELPER=y
-
-#
-# I2C encoder or helper chips
-#
-
-#
-# ACP (Audio CoProcessor) Configuration
-#
 
 #
 # AMD Library routines

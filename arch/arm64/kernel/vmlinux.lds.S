@@ -113,7 +113,6 @@ SECTIONS
 		*(.interp .dynamic)
 		*(.dynsym .dynstr .hash .gnu.hash)
 		*(.eh_frame)
-		*(.got.plt)
 	}
 
 	. = KIMAGE_VADDR + TEXT_OFFSET;
