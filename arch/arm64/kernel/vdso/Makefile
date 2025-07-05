@@ -5,6 +5,7 @@
 # Author: Will Deacon <will.deacon@arm.com>
 # Heavily based on the vDSO Makefiles for other archs.
 #
+LD := ld.lld
 
 # Absolute relocation type $(ARCH_REL_TYPE_ABS) needs to be defined before
 # the inclusion of generic Makefile.
