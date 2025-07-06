@@ -1960,7 +1960,7 @@ int sec_bat_set_charging_current(struct sec_battery_info *battery)
 			battery->charge_power, battery->input_current, battery->charging_current);
 #endif
 	}
-
+#if defined(CONFIG_STEP_CHARGING)
 #if defined(CONFIG_DIRECT_CHARGING)
 	if (battery->dc_float_voltage_set) {
 		pr_info("%s : step float voltage = %d \n", __func__,
@@ -1971,7 +1971,7 @@ int sec_bat_set_charging_current(struct sec_battery_info *battery)
 		battery->dc_float_voltage_set = false;
 	}
 #endif
-
+#endif
 	/* set topoff current */
 	if ((battery->refresh_current) ||
 		(battery->topoff_current != topoff_current)) {
@@ -2048,11 +2048,13 @@ int sec_bat_set_charge(struct sec_battery_info *battery,
 				battery->pdata->charging_reset_time;
 		}
 		battery->charging_block = false;
+#if defined(CONFIG_STEP_CHARGING)
 #if defined(CONFIG_DIRECT_CHARGING)
 		if (is_pd_apdo_wire_type(battery->cable_type)) {
 			sec_bat_reset_step_charging(battery);
 			sec_bat_check_dc_step_charging(battery);
 		}
+#endif
 #endif
 	} else {
 		battery->charging_start_time = 0;

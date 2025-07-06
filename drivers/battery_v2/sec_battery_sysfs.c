@@ -1827,10 +1827,12 @@ ssize_t sec_bat_show_attrs(struct device *dev,
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
 			battery->pd_list.now_isApdo);
 		break;
+#if defined(CONFIG_STEP_CHARGING)
 	case DIRECT_CHARGING_STEP:
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
 			battery->step_charging_status);
 		break;
+#endif
 	case DIRECT_CHARGING_IIN:
 		if (is_pd_apdo_wire_type(battery->wire_status)) {
 			value.intval = SEC_BATTERY_IIN_UA;
