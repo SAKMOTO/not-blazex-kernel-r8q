@@ -1,45 +1,67 @@
 #!/bin/bash
 LLVM_PATH="/home/skye/bomb/clang/bin/"
-TC_PATH="/home/skye/bomb/clang/bin/"
-TC2_PATH="/home/skye/bomb/clangsd/bin/"
-LLD_PATH="/home/skye/bomb/clangsd/bin/"
+SD_PATH="/home/skye/bomb/clangsd/bin/"
+
 KERNEL_NAME="not_kernel-CYHTM-"
-MAKE="./makeparallel"
-HOST_BUILD_ENV="ARCH=arm64 CC=${TC2_PATH}clang CROSS_COMPILE=${TC2_PATH}aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 PATH=$LLVM_PATH:$LLD_PATH:$PATH"  
+
+HOST_BUILD_ENV="ARCH=arm64 \
+                CC=${SD_PATH}clang \
+                CROSS_COMPILE=${SD_PATH}aarch64-linux-gnu- \
+                LLVM=1 \
+                LLVM_IAS=1 \
+                PATH=$LLVM_PATH:$SD_PATH:$PATH"
+
 KERNEL_MAKE_ENV="DTC_EXT=$(pwd)/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
-KERNEL_BUILD_ENV="ARCH=arm64 CROSS_COMPILE=${TC2_PATH}aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 PATH=$LLVM_PATH:$LLD_PATH:$PATH"  
-KERNEL_TUNE_FLAGS="-march=armv8.2-a -mtune=cortex-a77"
 
-rm -rf /home/skye/bomb/out/arch/arm64/boot/Image
-rm -rf /home/skye/bomb/AnyKernel3/dtb
-rm -rf /home/skye/bomb/dtbo.img
-rm -rf .version
-rm -rf .local
-#make O=/home/skye/bomb/out clean
-make O=/home/skye/bomb/out $HOST_BUILD_ENV not_defconfig
+KERNEL_BUILD_ENV="ARCH=arm64 \
+                  CROSS_COMPILE=${SD_PATH}aarch64-linux-gnu- \
+                  LLVM=1 \
+                  LLVM_IAS=1 \
+                  PATH=$LLVM_PATH:$SD_PATH:$PATH"
 
-echo "*****************************************"
-echo "*****************************************"
-
-make -j12 O=/home/skye/bomb/out $KERNEL_MAKE_ENV $KERNEL_BUILD_ENV KCFLAGS="$KERNEL_TUNE_FLAGS" \
-                                CC="${TC2_PATH}clang --target=aarch64-linux-gnu" dtbo.img
-                               
 DTBO_OUT="/home/skye/bomb/out/arch/arm64/boot"
 DTB_OUT="/home/skye/bomb/out/arch/arm64/boot/dts/vendor/qcom"
-cp $DTBO_OUT/dtbo.img /home/skye/bomb/AnyKernel3/r8q/dtbo.img
-cat $DTB_OUT/*.dtb > /home/skye/bomb/AnyKernel3/r8q/dtb
-
-make -j12 O=/home/skye/bomb/out $KERNEL_MAKE_ENV $KERNEL_BUILD_ENV KCFLAGS="$KERNEL_TUNE_FLAGS" \
-                                CC="${TC2_PATH}clang --target=aarch64-linux-gnu" Image
-                                
 IMAGE="/home/skye/bomb/out/arch/arm64/boot/Image"
-echo "**Build outputs**"
-ls /home/skye/bomb/out/arch/arm64/boot
-echo "**Build outputs**"
-cp $IMAGE /home/skye/bomb/AnyKernel3/r8q/Image
+OUT_DIR="/home/skye/bomb/out"
+ANYKERNEL_DIR="/home/skye/bomb/AnyKernel3/r8q"
 
-cd /home/skye/bomb/AnyKernel3/r8q
-rm *.zip
-zip -r9 ${KERNEL_NAME}$(date +"%Y%m%d")+r8q.zip .
+echo "*****************************************"
+echo "*****************************************"
+
+rm -rf "$OUT_DIR/arch/arm64/boot/Image"
+rm -rf "$ANYKERNEL_DIR/dtb"
+rm -rf "$OUT_DIR/dtbo.img"
+rm -rf .version .local
+make O="$OUT_DIR" $HOST_BUILD_ENV not_defconfig
+
+echo "*****************************************"
+echo "*****************************************"
+
+# Build Device Tree Blob//Overlay
+
+make -j12 O="$OUT_DIR" $KERNEL_MAKE_ENV $KERNEL_BUILD_ENV \
+     CC="${SD_PATH}clang --target=aarch64-linux-gnu" dtbo.img
+
+cp "$DTBO_OUT/dtbo.img" "$ANYKERNEL_DIR/dtbo.img"
+cat "$DTB_OUT"/*.dtb > "$ANYKERNEL_DIR/dtb"
+
+# Build Kernel Image
+
+make -j12 O="$OUT_DIR" $KERNEL_MAKE_ENV $KERNEL_BUILD_ENV \
+     CC="${SD_PATH}clang --target=aarch64-linux-gnu" Image
+
+echo "**Build outputs**"
+ls "$OUT_DIR/arch/arm64/boot"
+echo "**Build outputs**"
+
+cp "$IMAGE" "$ANYKERNEL_DIR/Image"
+
+# Package Kernel
+
+cd "$ANYKERNEL_DIR" || exit 1
+rm -f *.zip
+
+zip -r9 "${KERNEL_NAME}$(date +"%Y%m%d")+r8q.zip" .
+
 echo "The bomb has been planted."
 
