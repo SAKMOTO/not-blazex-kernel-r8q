@@ -150,7 +150,7 @@
 				<26 512 0 MHZ_TO_KBPS(1804, 4)>, /* index=9  */
 				<26 512 0 MHZ_TO_KBPS(2092, 4)>, /* index=10 */
 				<26 512 0 MHZ_TO_KBPS(2736, 4)>, /* index=11 */
-				<26 512 0 MHZ_TO_KBPS(3033, 4)>; /* index=12 */
+				<26 512 0 MHZ_TO_KBPS(2933, 4)>; /* index=12 */
 		};
 
 		qcom,l3-pwrlevels {
@@ -176,7 +176,7 @@
 			
 			qcom,l3-pwrlevel@3 {
 				reg = <3>;
-				qcom,l3-freq = <1533000000>;
+				qcom,l3-freq = <1733000000>;
 			};
 		};
 
