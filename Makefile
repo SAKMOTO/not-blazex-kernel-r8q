@@ -880,18 +880,10 @@ ifdef CONFIG_DEBUG_SECTION_MISMATCH
 KBUILD_CFLAGS += $(call cc-option, -fno-inline-functions-called-once)
 endif
 
-ifdef CONFIG_LD_DEAD_CODE_DATA_ELIMINATION
-KBUILD_CFLAGS_KERNEL += -ffunction-sections -fdata-sections
-LDFLAGS_vmlinux += --gc-sections
-endif
-
 ifdef CONFIG_LTO_CLANG
-ifdef CONFIG_THINLTO
+#KBUILD_CFLAGS_KERNEL += -ffunction-sections -fdata-sections
+#LDFLAGS_vmlinux += --gc-sections --warn-limit=1
 lto-clang-flags	:= -flto=thin
-KBUILD_LDFLAGS += -Wno-multiple-definition -Wno-symbol-type-mismatch
-else
-lto-clang-flags	:= -flto
-endif
 lto-clang-flags += -fvisibility=default $(call cc-option, -fsplit-lto-unit)
 
 # Limit inlining across translation units to reduce binary size
