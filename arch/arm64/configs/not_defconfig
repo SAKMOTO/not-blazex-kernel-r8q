@@ -453,11 +453,11 @@ CONFIG_RELR=y
 #
 # GCOV-based kernel profiling
 #
-CONFIG_ARCH_HAS_GCOV_PROFILE_ALL=y
-CONFIG_HAVE_GCC_PLUGINS=y
+CONFIG_ARCH_HAS_GCOV_PROFILE_ALL=n
+CONFIG_HAVE_GCC_PLUGINS=n
 CONFIG_RT_MUTEXES=y
 CONFIG_BASE_SMALL=0
-CONFIG_MODULES_TREE_LOOKUP=y
+CONFIG_MODULES_TREE_LOOKUP=n
 CONFIG_BLOCK=y
 CONFIG_BLK_SCSI_REQUEST=y
 CONFIG_BLK_DEV_BSG=y
@@ -482,8 +482,8 @@ CONFIG_BLOCK_SUPPORT_STLOG=y
 CONFIG_IOSCHED_SIO=y
 CONFIG_IOSCHED_NOOP=y
 CONFIG_IOSCHED_DEADLINE=y
-CONFIG_IOSCHED_CFQ=y
-CONFIG_CFQ_GROUP_IOSCHED=y
+CONFIG_IOSCHED_CFQ=n
+CONFIG_CFQ_GROUP_IOSCHED=n
 CONFIG_DEFAULT_SIO=y
 CONFIG_DEFAULT_IOSCHED="SIO"
 CONFIG_MQ_IOSCHED_DEADLINE=y
@@ -1000,64 +1000,12 @@ CONFIG_BLK_DEV_RAM_COUNT=16
 CONFIG_BLK_DEV_RAM_SIZE=8192
 
 #
-# NVME Support
-#
-
-#
 # Misc devices
 #
 CONFIG_HDCP_QSEECOM=y
 CONFIG_QSEECOM=y
 CONFIG_UID_SYS_STATS=y
 CONFIG_DEV_RIL_BRIDGE=y
-
-#
-# EEPROM support
-#
-
-#
-# Texas Instruments shared transport line discipline
-#
-
-#
-# Intel MIC & related support
-#
-
-#
-# Intel MIC Bus Driver
-#
-
-#
-# SCIF Bus Driver
-#
-
-#
-# VOP Bus Driver
-#
-
-#
-# Intel MIC Host Driver
-#
-
-#
-# Intel MIC Card Driver
-#
-
-#
-# SCIF Driver
-#
-
-#
-# Intel MIC Coprocessor State Management (COSM) Drivers
-#
-
-#
-# VOP Driver
-#
-
-#
-# qrc device driver
-#
 
 #
 # SCSI device support
@@ -1116,10 +1064,6 @@ CONFIG_TUN=y
 CONFIG_VETH=y
 
 #
-# CAIF transport drivers
-#
-
-#
 # Distributed Switch Architecture drivers
 #
 CONFIG_ETHERNET=y
@@ -1172,10 +1116,6 @@ CONFIG_SEC_CNSS2=y
 CONFIG_CNSS_UTILS=y
 CONFIG_CNSS_QMI_SVC=y
 CONFIG_CNSS_GENL=y
-
-#
-# Enable WiMAX (Networking options) to see the WiMAX drivers
-#
 
 #
 # Input device support
@@ -1239,10 +1179,6 @@ CONFIG_UNIX98_PTYS=y
 CONFIG_LDISC_AUTOLOAD=y
 
 #
-# Serial drivers
-#
-
-#
 # Non-8250 serial port support
 #
 CONFIG_SERIAL_CORE=y
@@ -1251,10 +1187,6 @@ CONFIG_SERIAL_MSM_GENI_HALF_SAMPLING=y
 CONFIG_HW_RANDOM=y
 CONFIG_HW_RANDOM_MSM_LEGACY=y
 CONFIG_HW_RANDOM_CAVIUM=y
-
-#
-# PCMCIA character devices
-#
 
 #
 # Diag Support
@@ -1281,22 +1213,10 @@ CONFIG_I2C_HELPER_AUTO=y
 CONFIG_I2C_ALGOBIT=y
 
 #
-# I2C Hardware Bus support
-#
-
-#
-# PC SMBus host controller drivers
-#
-
-#
 # I2C system bus drivers (mostly embedded / system-on-chip)
 #
 CONFIG_I2C_GPIO=y
 CONFIG_I2C_QCOM_GENI=y
-
-#
-# External I2C/SMBus adapter drivers
-#
 
 #
 # Other I2C/SMBus bus drivers
@@ -1321,14 +1241,6 @@ CONFIG_SPMI_MSM_PMIC_ARB_DEBUG=y
 CONFIG_PPS=y
 
 #
-# PPS clients support
-#
-
-#
-# PPS generators support
-#
-
-#
 # PTP clock support
 #
 CONFIG_PTP_1588_CLOCK=y
@@ -1350,26 +1262,6 @@ CONFIG_GPIOLIB_FASTPATH_LIMIT=512
 CONFIG_OF_GPIO=y
 CONFIG_GPIOLIB_IRQCHIP=y
 CONFIG_GPIO_SYSFS=y
-
-#
-# Memory mapped GPIO drivers
-#
-
-#
-# I2C GPIO expanders
-#
-
-#
-# MFD GPIO expanders
-#
-
-#
-# PCI GPIO expanders
-#
-
-#
-# SPI GPIO expanders
-#
 
 #
 # USB GPIO expanders
@@ -1610,10 +1502,6 @@ CONFIG_SND_SOC=y
 CONFIG_SND_SOC_COMPRESS=y
 
 #
-# SoC Audio for Freescale CPUs
-#
-
-#
 # Common SoC Audio options for Freescale CPUs:
 #
 CONFIG_SND_SOC_SAMSUNG_AUDIO=y
@@ -1702,14 +1590,7 @@ CONFIG_USB_OHCI_HCD_PCI=y
 CONFIG_USB_OHCI_HCD_PLATFORM=y
 
 #
-# USB Device Class drivers
-#
-
-#
 # NOTE: USB_STORAGE depends on SCSI but BLK_DEV_SD may
-#
-
-#
 # also be needed; see USB_STORAGE Help for more info
 #
 CONFIG_USB_STORAGE=y
@@ -1732,14 +1613,6 @@ CONFIG_USB_CHARGING_EVENT=y
 CONFIG_USB_ISP1760=y
 CONFIG_USB_ISP1760_HCD=y
 CONFIG_USB_ISP1760_HOST_ROLE=y
-
-#
-# USB port drivers
-#
-
-#
-# USB Miscellaneous drivers
-#
 
 #
 # USB Physical Layer drivers
@@ -1806,14 +1679,6 @@ CONFIG_USB_CONFIGFS_F_MTP=y
 CONFIG_USB_CONFIGFS_F_PTP=y
 CONFIG_USB_DUN_SUPPORT=y
 CONFIG_TYPEC=y
-
-#
-# USB Type-C Multiplexer/DeMultiplexer Switch support
-#
-
-#
-# USB Type-C Alternate Mode drivers
-#
 
 #
 # USB Power Delivery
@@ -1902,21 +1767,9 @@ CONFIG_RTC_INTF_PROC=y
 CONFIG_RTC_INTF_DEV=y
 
 #
-# I2C RTC drivers
-#
-
-#
 # SPI RTC drivers
 #
 CONFIG_RTC_I2C_AND_SPI=y
-
-#
-# SPI and I2C RTC drivers
-#
-
-#
-# Platform RTC drivers
-#
 
 #
 # on-CPU RTC drivers
@@ -1939,10 +1792,6 @@ CONFIG_DMA_OF=y
 CONFIG_QCOM_GPI_DMA=y
 
 #
-# DMA Clients
-#
-
-#
 # DMABUF options
 #
 CONFIG_SYNC_FILE=y
@@ -1955,46 +1804,6 @@ CONFIG_VIRTIO_MENU=y
 CONFIG_STAGING=y
 
 #
-# IIO staging drivers
-#
-
-#
-# Accelerometers
-#
-
-#
-# Analog to digital converters
-#
-
-#
-# Analog digital bi-direction converters
-#
-
-#
-# Capacitance to digital converters
-#
-
-#
-# Direct Digital Synthesis
-#
-
-#
-# Network Analyzer, Impedance Converters
-#
-
-#
-# Active energy metering IC
-#
-
-#
-# Resolver to digital converters
-#
-
-#
-# Speakup console speech
-#
-
-#
 # Android
 #
 CONFIG_ASHMEM=y
@@ -2003,10 +1812,6 @@ CONFIG_ION=y
 CONFIG_ION_RBIN_HEAP=y
 CONFIG_ION_RBIN_ONLY_FOR_UNDER_8GB=y
 CONFIG_ION_RBIN_HEAP_EXCEPTION=y
-
-#
-# Gasket devices
-#
 
 #
 # NOTIFIER configs
@@ -2034,10 +1839,6 @@ CONFIG_SEC_ABC_HUB_COND=y
 # Samsung ABC Hub Booting Time Check Options
 #
 CONFIG_SEC_ABC_HUB_BOOTC=y
-
-#
-# Samsung ABC Hub Booting Time Check eng mode Options
-#
 
 #
 # Qualcomm Atheros CLD WLAN module
@@ -2113,10 +1914,6 @@ CONFIG_ARM_SMMU=y
 CONFIG_QCOM_LAZY_MAPPING=y
 
 #
-# Remoteproc drivers
-#
-
-#
 # Rpmsg drivers
 #
 CONFIG_RPMSG=y
@@ -2124,26 +1921,6 @@ CONFIG_RPMSG_CHAR=y
 CONFIG_RPMSG_QCOM_GLINK_NATIVE=y
 CONFIG_RPMSG_QCOM_GLINK_SMEM=y
 CONFIG_RPMSG_QCOM_GLINK_SPSS=y
-
-#
-# SOC (System On Chip) specific Drivers
-#
-
-#
-# Amlogic SoC drivers
-#
-
-#
-# Broadcom SoC drivers
-#
-
-#
-# NXP/Freescale QorIQ SoC drivers
-#
-
-#
-# i.MX SoC drivers
-#
 
 #
 # Qualcomm SoC drivers
@@ -2240,122 +2017,10 @@ CONFIG_EXTCON_USB_GPIO=y
 CONFIG_IIO=y
 
 #
-# Accelerometers
-#
-
-#
 # Analog to digital converters
 #
 CONFIG_QCOM_VADC_COMMON=y
 CONFIG_QCOM_SPMI_ADC5=y
-
-#
-# Analog to digital and digital to analog converters
-#
-
-#
-# Analog Front Ends
-#
-
-#
-# Amplifiers
-#
-
-#
-# Chemical Sensors
-#
-
-#
-# Hid Sensor IIO Common
-#
-
-#
-# SSP Sensor Common
-#
-
-#
-# Counters
-#
-
-#
-# Digital to analog converters
-#
-
-#
-# IIO dummy driver
-#
-
-#
-# Frequency Synthesizers DDS/PLL
-#
-
-#
-# Clock Generator/Distribution
-#
-
-#
-# Phase-Locked Loop (PLL) frequency synthesizers
-#
-
-#
-# Digital gyroscope sensors
-#
-
-#
-# Health Sensors
-#
-
-#
-# Heart Rate Monitors
-#
-
-#
-# Humidity sensors
-#
-
-#
-# Inertial measurement units
-#
-
-#
-# Light sensors
-#
-
-#
-# Magnetometer sensors
-#
-
-#
-# Multiplexers
-#
-
-#
-# Inclinometer sensors
-#
-
-#
-# Digital potentiometers
-#
-
-#
-# Digital potentiostats
-#
-
-#
-# Pressure sensors
-#
-
-#
-# Lightning sensors
-#
-
-#
-# Proximity and distance sensors
-#
-
-#
-# Resolver to digital converters
-#
 
 #
 # Temperature sensors
