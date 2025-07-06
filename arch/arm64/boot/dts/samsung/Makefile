@@ -13,7 +13,7 @@ $(foreach dtbo, $(1), $(eval $(call __sec_dtbo_build, $(dtbo),$(2),$(3))))
 endef
 
 # KONA BASE DTB
-SEC_KONA_BASE_DTB := $(QCOM_DTB)/kona.dtb $(QCOM_DTB)/kona-v2.dtb $(QCOM_DTB)/kona-v2.1.dtb
+SEC_KONA_BASE_DTB := $(QCOM_DTB)/kona-v2.1.dtb
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 
