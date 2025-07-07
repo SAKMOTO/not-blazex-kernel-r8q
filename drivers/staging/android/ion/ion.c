@@ -1630,7 +1630,6 @@ struct ion_device *ion_device_create(void)
 
 	idev->debug_root = debugfs_create_dir("ion", NULL);
 	idev->heaps_debug_root = debugfs_create_dir("heaps", idev->debug_root);
-	WARN_ON(register_oom_notifier(&ion_oom_notifier));
 	idev->buffers = RB_ROOT;
 	mutex_init(&idev->buffer_lock);
 	init_rwsem(&idev->lock);
