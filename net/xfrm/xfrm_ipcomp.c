@@ -20,7 +20,6 @@
 #include <linux/list.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
-#include <linux/locallock.h>
 #include <linux/percpu.h>
 #include <linux/slab.h>
 #include <linux/smp.h>
@@ -37,7 +36,6 @@ struct ipcomp_tfms {
 
 static DEFINE_MUTEX(ipcomp_resource_mutex);
 static void * __percpu *ipcomp_scratches;
-static DEFINE_LOCAL_IRQ_LOCK(ipcomp_scratches_lock);
 static int ipcomp_scratch_users;
 static LIST_HEAD(ipcomp_tfms_list);
 
@@ -47,15 +45,12 @@ static int ipcomp_decompress(struct xfrm_state *x, struct sk_buff *skb)
 	const int plen = skb->len;
 	int dlen = IPCOMP_SCRATCH_SIZE;
 	const u8 *start = skb->data;
-	u8 *scratch;
-	struct crypto_comp *tfm;
-	int err, len;
+	const int cpu = get_cpu();
+	u8 *scratch = *per_cpu_ptr(ipcomp_scratches, cpu);
+	struct crypto_comp *tfm = *per_cpu_ptr(ipcd->tfms, cpu);
+	int err = crypto_comp_decompress(tfm, start, plen, scratch, &dlen);
+	int len;
 
-	local_lock(ipcomp_scratches_lock);
-
-	scratch = *this_cpu_ptr(ipcomp_scratches);
-	tfm = *this_cpu_ptr(ipcd->tfms);
-	err = crypto_comp_decompress(tfm, start, plen, scratch, &dlen);
 	if (err)
 		goto out;
 
@@ -108,7 +103,7 @@ static int ipcomp_decompress(struct xfrm_state *x, struct sk_buff *skb)
 	err = 0;
 
 out:
-	local_unlock(ipcomp_scratches_lock);
+	put_cpu();
 	return err;
 }
 
@@ -151,8 +146,6 @@ static int ipcomp_compress(struct xfrm_state *x, struct sk_buff *skb)
 	int err;
 
 	local_bh_disable();
-	local_lock(ipcomp_scratches_lock);
-
 	scratch = *this_cpu_ptr(ipcomp_scratches);
 	tfm = *this_cpu_ptr(ipcd->tfms);
 	err = crypto_comp_compress(tfm, start, plen, scratch, &dlen);
@@ -165,14 +158,12 @@ static int ipcomp_compress(struct xfrm_state *x, struct sk_buff *skb)
 	}
 
 	memcpy(start + sizeof(struct ip_comp_hdr), scratch, dlen);
-	local_unlock(ipcomp_scratches_lock);
 	local_bh_enable();
 
 	pskb_trim(skb, dlen + sizeof(struct ip_comp_hdr));
 	return 0;
 
 out:
-	local_unlock(ipcomp_scratches_lock);
 	local_bh_enable();
 	return err;
 }
