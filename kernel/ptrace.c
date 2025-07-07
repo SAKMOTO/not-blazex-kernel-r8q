@@ -214,8 +214,6 @@ static void ptrace_unfreeze_traced(struct task_struct *task)
 	raw_spin_lock_irqsave(&task->pi_lock, flags);
 	if (task->state == __TASK_TRACED)
 		task->state = TASK_TRACED;
-	else if (task->saved_state == __TASK_TRACED)
-		task->saved_state = TASK_TRACED;
 	else
 		frozen = false;
 	raw_spin_unlock_irqrestore(&task->pi_lock, flags);
