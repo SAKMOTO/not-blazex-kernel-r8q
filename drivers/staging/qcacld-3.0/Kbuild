@@ -1,5 +1,8 @@
 # We can build either as part of a standalone Kernel build or as
 # an external module.  Determine which mechanism is being used
+
+subdir-ccflags-y += -O2
+
 ifeq ($(MODNAME),)
 	KERNEL_BUILD := y
 else
