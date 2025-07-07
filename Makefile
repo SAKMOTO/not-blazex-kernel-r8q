@@ -750,6 +750,7 @@ stackp-flags-$(CONFIG_STACKPROTECTOR_STRONG)      := -fstack-protector-strong
 KBUILD_CFLAGS += $(stackp-flags-y)
 
 ifeq ($(cc-name),clang)
+KBUILD_CFLAGS   += -mcpu=cortex-a77+crypto+crc -mtune=cortex-a77 -mfpu=neon -march=armv8.2-a+crypto+crc+fp16+simd
 
 ifneq ($(CROSS_COMPILE),)
 CLANG_TRIPLE	?= $(CROSS_COMPILE)
