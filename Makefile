@@ -447,7 +447,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Werror-implicit-function-declaration \
 		   -Werror=return-type -Wno-format-security \
 		   -std=gnu89
-KBUILD_CFLAGS	+= -DPLATFORM_VERSION=11.0.0
+
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
@@ -709,7 +709,7 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning, stringop-overread)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, array-compare)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, address)
 
-KBUILD_CFLAGS   += -O3 -funroll-loops -finline-functions -fomit-frame-pointer -foptimize-sibling-calls -ffast-math -funsafe-math-optimizations -ffinite-math-only
+KBUILD_CFLAGS   += -Ofast -funroll-loops -finline-functions -fomit-frame-pointer -foptimize-sibling-calls -ffast-math -funsafe-math-optimizations -ffinite-math-only
 
 
 ifdef CONFIG_CC_WERROR
