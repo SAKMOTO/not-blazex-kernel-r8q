@@ -13,6 +13,9 @@
 
 #define trace_sched_kthread_stop(...) {}
 #define trace_sched_kthread_stop_ret(...) {}
+#define trace_sched_kthread_work_execute_start(...) {}
+#define trace_sched_kthread_work_execute_end(...) {}
+#define trace_sched_kthread_work_queue_work(...) {}
 #define trace_sched_enq_deq_task(...) {}
 #define trace_sched_waking(...) {}
 #define trace_sched_wakeup(...) {}
@@ -75,6 +78,17 @@
 
 #define trace_sched_isolate_enabled(...) false
 #define trace_sched_task_util_enabled(...) false
+#define trace_sched_load_balance_skip_tasks(...) {}
+#define trace_sched_load_to_gov(...) {}
+#define trace_sched_update_pred_demand(...) {}
+#define trace_sched_update_history(...) {}
+#define trace_sched_get_task_cpu_cycles(...) {}
+#define trace_walt_window_rollover(...) {}
+#define trace_sched_update_task_ravg(...) {}
+#define trace_sched_update_task_ravg_mini(...) {}
+#define trace_sched_set_preferred_cluster_enabled(...) false
+#define trace_sched_set_preferred_cluster(...) {}
+#define trace_sched_migration_update_sum(...) {}
 
 #if 0
 
