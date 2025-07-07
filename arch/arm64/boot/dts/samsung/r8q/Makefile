@@ -11,7 +11,7 @@ endef
 
 # KONA BASE DTB
 QCOM_DTB := ../../vendor/qcom
-SEC_KONA_BASE_DTB := $(QCOM_DTB)/kona-v2.1.dtb
+SEC_KONA_BASE_DTB := $(QCOM_DTB)/kona.dtb $(QCOM_DTB)/kona-v2.dtb $(QCOM_DTB)/kona-v2.1.dtb
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 
