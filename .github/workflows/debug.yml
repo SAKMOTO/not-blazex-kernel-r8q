@@ -1,0 +1,35 @@
+name: Find Defconfig
+
+on: [workflow_dispatch]
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v4
+    
+    - name: Find all defconfig files
+      run: |
+        echo "🔍 Searching for defconfig files..."
+        echo ""
+        echo "=== Looking in arch/arm64/configs/ ==="
+        find arch/arm64/configs -name "*defconfig*" 2>/dev/null | sort
+        
+        echo ""
+        echo "=== Looking for vendor defconfigs ==="
+        find . -path "./.git" -prune -o -name "*defconfig*" -type f -print | sort
+        
+        echo ""
+        echo "=== Common S20 FE defconfig names ==="
+        echo "Looking for r8q, sm7225, exynos..."
+        find . -type f -name "*r8q*" -o -name "*sm7225*" -o -name "*exynos98*" 2>/dev/null
+        
+        echo ""
+        echo "=== List all files in arch/arm64/configs/ ==="
+        ls -la arch/arm64/configs/ 2>/dev/null || echo "Directory not found"
+        
+        echo ""
+        echo "=== Check Makefile for clues ==="
+        grep -i "defconfig" Makefile 2>/dev/null | head -20 || echo "No defconfig in Makefile"
