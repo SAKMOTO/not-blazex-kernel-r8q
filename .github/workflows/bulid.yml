@@ -103,7 +103,7 @@ jobs:
         cp arch/arm64/boot/Image.gz AnyKernel3/
         
         # Create anykernel.sh
-        cat > AnyKernel3/anykernel.sh << 'EOF'
+        cat > AnyKernel3/anykernel.sh << "EOF"
 #!/bin/bash
 . tools/ak3-core.sh
 dump_boot
