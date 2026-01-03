@@ -60,7 +60,7 @@ jobs:
         make clean 2>/dev/null || true
         
         # Load configuration
-        make $KERNEL_CONFIG
+        make ARCH=arm64 $KERNEL_CONFIG
         
         # Compile kernel
         make -j$(nproc) ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
