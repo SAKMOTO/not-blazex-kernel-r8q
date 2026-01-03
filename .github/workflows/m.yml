@@ -2,7 +2,7 @@ name: Build S20 FE Kernel
 
 on:
   push:
-    branches: [main]
+    branches: [main, copilot/run-workflow-on-m-yml]
   workflow_dispatch:
 
 jobs:
