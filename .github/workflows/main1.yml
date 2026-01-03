@@ -85,9 +85,10 @@ jobs:
         cp arch/arm64/boot/Image.gz AnyKernel3/
         
         # Create basic anykernel script
-        cat > AnyKernel3/anykernel.sh << 'EOF'
+        cat > AnyKernel3/anykernel.sh << "EOF"
 #!/bin/bash
-. tools/ak3-core.sh
+.tools/ak3-core.sh
+
 dump_boot
 write_boot
 ui_print "BlazeX Kernel installed!"
