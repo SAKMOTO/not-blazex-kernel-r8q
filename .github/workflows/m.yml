@@ -22,6 +22,7 @@ jobs:
         sudo apt install -y bc bison build-essential curl flex git
         sudo apt install -y libelf-dev libssl-dev libncurses5-dev lz4
         sudo apt install -y python3 wget gcc-aarch64-linux-gnu zip
+        sudo apt install -y llvm lld clang
 
     - name: Find defconfig
       id: find-config
