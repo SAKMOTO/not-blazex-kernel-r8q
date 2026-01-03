@@ -1,0 +1,82 @@
+name: Build Kernel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+    
+    - name: Setup build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bc bison build-essential curl flex git \
+          libelf-dev libssl-dev libncurses5-dev lz4 python3 wget \
+          gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
+    
+    - name: Download toolchains
+      run: |
+        # Proton Clang (for S20 FE)
+        mkdir -p toolchains
+        git clone https://github.com/kdrag0n/proton-clang.git --depth=1 toolchains/proton-clang
+        
+        # AnyKernel3
+        git clone https://github.com/osm0sis/AnyKernel3.git --depth=1 anykernel
+    
+    - name: Build kernel
+      run: |
+        # Set environment
+        export ARCH=arm64
+        export SUBARCH=arm64
+        export DEFCONFIG=vendor/r8q_defconfig
+        
+        # Clean
+        make clean && make mrproper
+        
+        # Load config
+        make O=out $DEFCONFIG
+        
+        # Build with Proton Clang
+        make -j$(nproc) O=out \
+          CC=toolchains/proton-clang/bin/clang \
+          CROSS_COMPILE=aarch64-linux-gnu- \
+          CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+          LLVM=1 LLVM_IAS=1
+        
+        # Check if build succeeded
+        if [ -f "out/arch/arm64/boot/Image.gz" ]; then
+          echo "✅ Build successful!"
+        else
+          echo "❌ Build failed!"
+          exit 1
+        fi
+    
+    - name: Create flashable ZIP
+      run: |
+        # Copy kernel to AnyKernel
+        cp out/arch/arm64/boot/Image.gz anykernel/
+        
+        # Create version file
+        echo "BlazeX Kernel for S20 FE" > anykernel/version
+        echo "Build date: $(date)" >> anykernel/version
+        
+        # Create ZIP
+        cd anykernel
+        zip -r9 ../BlazeX-Kernel-r8q-$(date +%Y%m%d).zip *
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: kernel-build
+        path: |
+          *.zip
+          out/arch/arm64/boot/Image.gz
+        retention-days: 7
