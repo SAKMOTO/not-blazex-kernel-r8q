@@ -22,7 +22,17 @@ jobs:
         sudo apt install -y bc bison build-essential curl flex git
         sudo apt install -y libelf-dev libssl-dev libncurses5-dev lz4
         sudo apt install -y python3 wget gcc-aarch64-linux-gnu zip
-        sudo apt install -y llvm lld clang
+        
+        # Install newer LLVM/Clang from official LLVM repository
+        wget https://apt.llvm.org/llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 18
+        sudo apt install -y lld-18
+        
+        # Create symlinks for default versions
+        sudo ln -sf /usr/bin/clang-18 /usr/bin/clang
+        sudo ln -sf /usr/bin/ld.lld-18 /usr/bin/ld.lld
+        sudo ln -sf /usr/bin/lld-18 /usr/bin/lld
 
     - name: Find defconfig
       id: find-config
