@@ -1,0 +1,141 @@
+name: Build Kernel for S20 FE
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+    # Step 1: Get the code
+    - name: Checkout source
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    # Step 2: Install tools
+    - name: Install build tools
+      run: |
+        sudo apt update
+        sudo apt install -y \
+          bc \
+          bison \
+          build-essential \
+          curl \
+          flex \
+          gcc-aarch64-linux-gnu \
+          gcc-arm-linux-gnueabi \
+          git \
+          libelf-dev \
+          libssl-dev \
+          libncurses5-dev \
+          lz4 \
+          python3 \
+          wget \
+          zip
+
+    # Step 3: Find defconfig
+    - name: Find correct defconfig
+      id: find-config
+      run: |
+        echo "Looking for defconfig files..."
+        
+        # List all defconfigs
+        find . -name "*defconfig" 2>/dev/null | head -20
+        
+        # Try to find S20 FE defconfig
+        if [ -f "arch/arm64/configs/vendor/sm7225-sec_defconfig" ]; then
+          echo "config=vendor/sm7225-sec_defconfig" >> $GITHUB_OUTPUT
+        elif [ -f "arch/arm64/configs/sm7225-sec_defconfig" ]; then
+          echo "config=sm7225-sec_defconfig" >> $GITHUB_OUTPUT
+        elif [ -f "arch/arm64/configs/vendor/r8q_defconfig" ]; then
+          echo "config=vendor/r8q_defconfig" >> $GITHUB_OUTPUT
+        else
+          # Use first found defconfig
+          FIRST=$(find arch/arm64/configs -name "*defconfig" 2>/dev/null | head -1)
+          if [ -n "$FIRST" ]; then
+            CONFIG=${FIRST#arch/arm64/configs/}
+            echo "config=$CONFIG" >> $GITHUB_OUTPUT
+          else
+            echo "ERROR: No defconfig found!"
+            exit 1
+          fi
+        fi
+
+    # Step 4: Build kernel
+    - name: Build kernel
+      env:
+        DEFCONFIG: ${{ steps.find-config.outputs.config }}
+      run: |
+        echo "Building with defconfig: $DEFCONFIG"
+        
+        # Clean
+        make clean 2>/dev/null || true
+        
+        # Load config
+        make $DEFCONFIG
+        
+        # Build
+        make -j$(nproc) \
+          ARCH=arm64 \
+          CROSS_COMPILE=aarch64-linux-gnu-
+        
+        # Check if successful
+        if [ -f "arch/arm64/boot/Image.gz" ]; then
+          echo "✅ Build successful!"
+          ls -lh arch/arm64/boot/Image.gz
+        else
+          echo "❌ Build failed!"
+          exit 1
+        fi
+
+    # Step 5: Create flashable ZIP
+    - name: Create flashable package
+      run: |
+        # Get AnyKernel3
+        git clone https://github.com/osm0sis/AnyKernel3.git --depth=1
+        
+        # Copy kernel
+        cp arch/arm64/boot/Image.gz AnyKernel3/
+        
+        # Create anykernel.sh
+        cat > AnyKernel3/anykernel.sh << 'EOF'
+#!/bin/bash
+. tools/ak3-core.sh
+dump_boot
+write_boot
+ui_print "Kernel installed successfully!"
+EOF
+        
+        # Create ZIP
+        cd AnyKernel3
+        zip -r9 ../kernel-s20fe-$(date +%Y%m%d).zip *
+        
+        echo "ZIP created successfully!"
+
+    # Step 6: Upload result
+    - name: Upload kernel
+      uses: actions/upload-artifact@v4
+      with:
+        name: kernel-build
+        path: |
+          *.zip
+          arch/arm64/boot/Image.gz
+        retention-days: 7
+
+    # Step 7: Success message
+    - name: Show success
+      if: success()
+      run: |
+        echo ""
+        echo "========================================"
+        echo "✅ KERNEL BUILD COMPLETE!"
+        echo "========================================"
+        echo "Built on GitHub Actions - No local storage used!"
+        echo ""
+        echo "Download the kernel from Artifacts section."
+        echo "========================================"
