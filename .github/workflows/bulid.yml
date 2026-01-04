@@ -23,13 +23,31 @@ jobs:
         sudo apt install -y libelf-dev libssl-dev libncurses5-dev lz4
         sudo apt install -y python3 python3-pip wget zip
         
-        # Install newer LLVM/Clang (CRITICAL FIX)
-        wget https://github.com/llvm/llvm-project/releases/download/llvmorg-17.0.6/clang+llvm-17.0.6-aarch64-linux-gnu.tar.xz
-        tar -xf clang+llvm-17.0.6-aarch64-linux-gnu.tar.xz
-        mv clang+llvm-17.0.6-aarch64-linux-gnu clang-17
-        
         # Install aarch64 gcc
         sudo apt install -y gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
+        
+        # Install newer LLVM/Clang 17 for x86_64 (GitHub Actions runners)
+        echo "📥 Downloading Clang 17 for x86_64..."
+        wget -q https://github.com/llvm/llvm-project/releases/download/llvmorg-17.0.6/clang+llvm-17.0.6-x86_64-linux-gnu-ubuntu-22.04.tar.xz
+        
+        echo "📦 Extracting Clang 17..."
+        tar -xf clang+llvm-17.0.6-x86_64-linux-gnu-ubuntu-22.04.tar.xz
+        mv clang+llvm-17.0.6-x86_64-linux-gnu-ubuntu-22.04 clang-17
+        
+        # Verify Clang installation
+        echo "✅ Verifying Clang 17 installation..."
+        if [ -f "clang-17/bin/clang" ]; then
+          if file clang-17/bin/clang | grep -q "x86-64"; then
+            echo "✅ Clang 17 (x86_64) installed successfully"
+          else
+            echo "❌ ERROR: Wrong architecture binary downloaded!"
+            file clang-17/bin/clang
+            exit 1
+          fi
+        else
+          echo "❌ ERROR: Clang 17 installation failed!"
+          exit 1
+        fi
 
     - name: Find defconfig
       id: find-config
@@ -79,36 +97,56 @@ jobs:
         make mrproper 2>/dev/null || true
         
         # Load config
-        make $KERNEL_CONFIG
+        make ARCH=arm64 $KERNEL_CONFIG
         
-        # Build with NEW Clang 17 (FIX for --no-warn-rwx-segments error)
-        echo "Using Clang 17 toolchain..."
-        
-        # Method 1: Try with Clang 17
-        make -j$(nproc) \
-          CC=$(pwd)/clang-17/bin/clang \
-          LD=ld.lld \
-          AR=llvm-ar \
-          NM=llvm-nm \
-          OBJCOPY=llvm-objcopy \
-          OBJDUMP=llvm-objdump \
-          STRIP=llvm-strip \
-          CROSS_COMPILE=aarch64-linux-gnu- \
-          CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
-          LLVM=1 \
-          LLVM_IAS=1 \
-          CLANG_TRIPLE=aarch64-linux-gnu-
-        
-        # Check if build succeeded
-        if [ -f "arch/arm64/boot/Image.gz" ]; then
-          echo "✅ Kernel build SUCCESSFUL with Clang 17!"
-          ls -lh arch/arm64/boot/Image.gz
-        else
-          echo "⚠️ Clang 17 failed, trying alternative..."
+        # Verify Clang 17 binaries are available
+        if [ -f "clang-17/bin/clang" ]; then
+          echo "✅ Clang 17 found, attempting build..."
           
-          # Method 2: Try with GCC only (no Clang)
-          make clean
-          make $KERNEL_CONFIG
+          # Build with Clang 17 (FIX for --no-warn-rwx-segments error)
+          echo "Using Clang 17 toolchain..."
+          
+          # Method 1: Try with Clang 17
+          make -j$(nproc) \
+            ARCH=arm64 \
+            CC=$(pwd)/clang-17/bin/clang \
+            LD=$(pwd)/clang-17/bin/ld.lld \
+            AR=$(pwd)/clang-17/bin/llvm-ar \
+            NM=$(pwd)/clang-17/bin/llvm-nm \
+            OBJCOPY=$(pwd)/clang-17/bin/llvm-objcopy \
+            OBJDUMP=$(pwd)/clang-17/bin/llvm-objdump \
+            STRIP=$(pwd)/clang-17/bin/llvm-strip \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+            LLVM=1 \
+            LLVM_IAS=1 \
+            CLANG_TRIPLE=aarch64-linux-gnu-
+          
+          # Check if build succeeded
+          if [ -f "arch/arm64/boot/Image.gz" ]; then
+            echo "✅ Kernel build SUCCESSFUL with Clang 17!"
+            ls -lh arch/arm64/boot/Image.gz
+          else
+            echo "⚠️ Clang 17 failed, trying GCC fallback..."
+            
+            # Method 2: Try with GCC only (no Clang)
+            make clean
+            make ARCH=arm64 $KERNEL_CONFIG
+            make -j$(nproc) \
+              ARCH=arm64 \
+              CROSS_COMPILE=aarch64-linux-gnu-
+              
+            if [ -f "arch/arm64/boot/Image.gz" ]; then
+              echo "✅ Kernel build SUCCESSFUL with GCC!"
+            else
+              echo "❌ All build methods failed"
+              exit 1
+            fi
+          fi
+        else
+          echo "⚠️ Clang 17 not found, using GCC..."
+          
+          # Build with GCC only
           make -j$(nproc) \
             ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu-
@@ -116,7 +154,7 @@ jobs:
           if [ -f "arch/arm64/boot/Image.gz" ]; then
             echo "✅ Kernel build SUCCESSFUL with GCC!"
           else
-            echo "❌ All build methods failed"
+            echo "❌ Build failed"
             exit 1
           fi
         fi
@@ -170,7 +208,7 @@ jobs:
         # Create version info
         echo "BlazeX Kernel for Samsung Galaxy S20 FE" > AnyKernel3/version
         echo "Build date: $(date)" >> AnyKernel3/version
-        echo "Git commit: ${{ github.sha_short }}" >> AnyKernel3/version
+        echo "Git commit: ${{ github.sha }}" >> AnyKernel3/version
         echo "Defconfig: ${{ steps.find-config.outputs.DEFCONFIG }}" >> AnyKernel3/version
         
         # Create ZIP
@@ -182,7 +220,7 @@ jobs:
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: kernel-build-${{ github.sha_short }}
+        name: kernel-build-${{ github.sha }}
         path: |
           *.zip
           arch/arm64/boot/Image.gz
