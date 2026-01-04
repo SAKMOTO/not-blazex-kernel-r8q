@@ -77,7 +77,7 @@ jobs:
         make clean 2>/dev/null || true
         
         # Load config
-        make $DEFCONFIG
+        make ARCH=arm64 $DEFCONFIG
         
         # Build
         make -j$(nproc) \

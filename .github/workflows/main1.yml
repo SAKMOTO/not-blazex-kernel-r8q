@@ -60,7 +60,7 @@ jobs:
         make clean 2>/dev/null || true
         
         # Load configuration
-        make $KERNEL_CONFIG
+        make ARCH=arm64 $KERNEL_CONFIG
         
         # Compile kernel
         make -j$(nproc) ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
@@ -87,7 +87,7 @@ jobs:
         # Create basic anykernel script
         cat > AnyKernel3/anykernel.sh << "EOF"
 #!/bin/bash
-\.tools/ak3-core.sh
+. tools/ak3-core.sh
 dump_boot
 write_boot
 ui_print "BlazeX Kernel installed!"

@@ -189,11 +189,11 @@ EOF
         echo "Method 1: Building with O=out..."
         
         # Load defconfig
-        if ! make O=out $DEFCONFIG; then
+        if ! make ARCH=arm64 O=out $DEFCONFIG; then
           echo "⚠️ Failed with O=out, trying without..."
           # Method 2: Build without O=out
           make clean 2>/dev/null || true
-          make $DEFCONFIG
+          make ARCH=arm64 $DEFCONFIG
         fi
         
         # Set toolchain path
