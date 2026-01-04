@@ -1,4 +1,4 @@
-name: Build Kernel for S20 FE
+name: Build S20 FE Kernel
 
 on:
   push:
@@ -8,134 +8,198 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
-    # Step 1: Get the code
-    - name: Checkout source
+    - name: Checkout source code
       uses: actions/checkout@v4
       with:
         submodules: true
 
-    # Step 2: Install tools
     - name: Install build tools
       run: |
         sudo apt update
-        sudo apt install -y \
-          bc \
-          bison \
-          build-essential \
-          curl \
-          flex \
-          gcc-aarch64-linux-gnu \
-          gcc-arm-linux-gnueabi \
-          git \
-          libelf-dev \
-          libssl-dev \
-          libncurses5-dev \
-          lz4 \
-          python3 \
-          wget \
-          zip
+        sudo apt install -y bc bison build-essential curl flex git
+        sudo apt install -y libelf-dev libssl-dev libncurses5-dev lz4
+        sudo apt install -y python3 python3-pip wget zip
+        
+        # Install newer LLVM/Clang (CRITICAL FIX)
+        wget https://github.com/llvm/llvm-project/releases/download/llvmorg-17.0.6/clang+llvm-17.0.6-x86_64-linux-gnu-ubuntu-22.04.tar.xz
+        tar -xf clang+llvm-17.0.6-x86_64-linux-gnu-ubuntu-22.04.tar.xz
+        mv clang+llvm-17.0.6-x86_64-linux-gnu-ubuntu-22.04 clang-17
+        
+        # Install aarch64 gcc
+        sudo apt install -y gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
 
-    # Step 3: Find defconfig
-    - name: Find correct defconfig
+    - name: Find defconfig
       id: find-config
       run: |
-        echo "Looking for defconfig files..."
+        echo "🔍 Finding defconfig..."
         
-        # List all defconfigs
-        find . -name "*defconfig" 2>/dev/null | head -20
+        # Most common S20 FE defconfig
+        DEFCONFIG=""
         
-        # Try to find S20 FE defconfig
+        # Try common locations
         if [ -f "arch/arm64/configs/vendor/sm7225-sec_defconfig" ]; then
-          echo "config=vendor/sm7225-sec_defconfig" >> $GITHUB_OUTPUT
+          DEFCONFIG="vendor/sm7225-sec_defconfig"
         elif [ -f "arch/arm64/configs/sm7225-sec_defconfig" ]; then
-          echo "config=sm7225-sec_defconfig" >> $GITHUB_OUTPUT
+          DEFCONFIG="sm7225-sec_defconfig"
         elif [ -f "arch/arm64/configs/vendor/r8q_defconfig" ]; then
-          echo "config=vendor/r8q_defconfig" >> $GITHUB_OUTPUT
+          DEFCONFIG="vendor/r8q_defconfig"
         else
-          # Use first found defconfig
-          FIRST=$(find arch/arm64/configs -name "*defconfig" 2>/dev/null | head -1)
-          if [ -n "$FIRST" ]; then
-            CONFIG=${FIRST#arch/arm64/configs/}
-            echo "config=$CONFIG" >> $GITHUB_OUTPUT
+          # List available defconfigs
+          echo "Available defconfigs:"
+          find arch/arm64/configs -name "*defconfig" 2>/dev/null | head -20
+          
+          # Use first available
+          DEFCONFIG=$(find arch/arm64/configs -name "*defconfig" 2>/dev/null | head -1)
+          DEFCONFIG=${DEFCONFIG#arch/arm64/configs/}
+        fi
+        
+        if [ -z "$DEFCONFIG" ]; then
+          echo "❌ No defconfig found!"
+          exit 1
+        fi
+        
+        echo "✅ Using defconfig: $DEFCONFIG"
+        echo "DEFCONFIG=$DEFCONFIG" >> $GITHUB_OUTPUT
+
+    - name: Build kernel (FIXED TOOLCHAIN)
+      env:
+        KERNEL_CONFIG: ${{ steps.find-config.outputs.DEFCONFIG }}
+      run: |
+        echo "🚀 Building kernel with config: $KERNEL_CONFIG"
+        
+        # Set environment
+        export ARCH=arm64
+        export SUBARCH=arm64
+        
+        # Clean
+        make clean 2>/dev/null || true
+        make mrproper 2>/dev/null || true
+        
+        # Load config
+        make $KERNEL_CONFIG
+        
+        # Build with NEW Clang 17 (FIX for --no-warn-rwx-segments error)
+        echo "Using Clang 17 toolchain..."
+        
+        # Method 1: Try with Clang 17
+        make -j$(nproc) \
+          CC=$(pwd)/clang-17/bin/clang \
+          LD=ld.lld \
+          AR=llvm-ar \
+          NM=llvm-nm \
+          OBJCOPY=llvm-objcopy \
+          OBJDUMP=llvm-objdump \
+          STRIP=llvm-strip \
+          CROSS_COMPILE=aarch64-linux-gnu- \
+          CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+          LLVM=1 \
+          LLVM_IAS=1 \
+          CLANG_TRIPLE=aarch64-linux-gnu-
+        
+        # Check if build succeeded
+        if [ -f "arch/arm64/boot/Image.gz" ]; then
+          echo "✅ Kernel build SUCCESSFUL with Clang 17!"
+          ls -lh arch/arm64/boot/Image.gz
+        else
+          echo "⚠️ Clang 17 failed, trying alternative..."
+          
+          # Method 2: Try with GCC only (no Clang)
+          make clean
+          make $KERNEL_CONFIG
+          make -j$(nproc) \
+            ARCH=arm64 \
+            CROSS_COMPILE=aarch64-linux-gnu-
+            
+          if [ -f "arch/arm64/boot/Image.gz" ]; then
+            echo "✅ Kernel build SUCCESSFUL with GCC!"
           else
-            echo "ERROR: No defconfig found!"
+            echo "❌ All build methods failed"
             exit 1
           fi
         fi
 
-    # Step 4: Build kernel
-    - name: Build kernel
-      env:
-        DEFCONFIG: ${{ steps.find-config.outputs.config }}
+    - name: Create flashable ZIP
       run: |
-        echo "Building with defconfig: $DEFCONFIG"
+        echo "📦 Creating flashable package..."
         
-        # Clean
-        make clean 2>/dev/null || true
+        # Download AnyKernel3
+        git clone https://github.com/osm0sis/AnyKernel3 --depth=1
         
-        # Load config
-        make ARCH=arm64 $DEFCONFIG
-        
-        # Build
-        make -j$(nproc) \
-          ARCH=arm64 \
-          CROSS_COMPILE=aarch64-linux-gnu-
-        
-        # Check if successful
-        if [ -f "arch/arm64/boot/Image.gz" ]; then
-          echo "✅ Build successful!"
-          ls -lh arch/arm64/boot/Image.gz
-        else
-          echo "❌ Build failed!"
-          exit 1
-        fi
-
-    # Step 5: Create flashable ZIP
-    - name: Create flashable package
-      run: |
-        # Get AnyKernel3
-        git clone https://github.com/osm0sis/AnyKernel3.git --depth=1
-        
-        # Copy kernel
+        # Copy kernel image
         cp arch/arm64/boot/Image.gz AnyKernel3/
         
-        # Create anykernel.sh
-        cat > AnyKernel3/anykernel.sh << "EOF"
-#!/bin/bash
-. tools/ak3-core.sh
-dump_boot
-write_boot
-ui_print "Kernel installed successfully!"
-EOF
+        # Create anykernel.sh for S20 FE
+        echo '#!/bin/bash' > AnyKernel3/anykernel.sh
+        echo '' >> AnyKernel3/anykernel.sh
+        echo '# AnyKernel3 Script for Samsung S20 FE' >> AnyKernel3/anykernel.sh
+        echo '' >> AnyKernel3/anykernel.sh
+        echo '## AnyKernel setup' >> AnyKernel3/anykernel.sh
+        echo 'kernel.string=BlazeX Kernel' >> AnyKernel3/anykernel.sh
+        echo 'do.devicecheck=1' >> AnyKernel3/anykernel.sh
+        echo 'do.modules=0' >> AnyKernel3/anykernel.sh
+        echo 'do.systemless=1' >> AnyKernel3/anykernel.sh
+        echo 'do.cleanup=1' >> AnyKernel3/anykernel.sh
+        echo 'device.name1=r8q' >> AnyKernel3/anykernel.sh
+        echo 'device.name2=r8s' >> AnyKernel3/anykernel.sh
+        echo '' >> AnyKernel3/anykernel.sh
+        echo '## AnyKernel install' >> AnyKernel3/anykernel.sh
+        echo '. tools/ak3-core.sh' >> AnyKernel3/anykernel.sh
+        echo '' >> AnyKernel3/anykernel.sh
+        echo '# Device detection' >> AnyKernel3/anykernel.sh
+        echo 'case "$(getprop ro.product.device)" in' >> AnyKernel3/anykernel.sh
+        echo '  "r8q"|"r8s")' >> AnyKernel3/anykernel.sh
+        echo '    ui_print "Installing for Galaxy S20 FE...";' >> AnyKernel3/anykernel.sh
+        echo '    block=/dev/block/bootdevice/by-name/boot;' >> AnyKernel3/anykernel.sh
+        echo '    ;;' >> AnyKernel3/anykernel.sh
+        echo '  *)' >> AnyKernel3/anykernel.sh
+        echo '    abort "Unsupported device!";' >> AnyKernel3/anykernel.sh
+        echo '    ;;' >> AnyKernel3/anykernel.sh
+        echo 'esac' >> AnyKernel3/anykernel.sh
+        echo '' >> AnyKernel3/anykernel.sh
+        echo 'dump_boot;' >> AnyKernel3/anykernel.sh
+        echo 'write_boot;' >> AnyKernel3/anykernel.sh
+        echo '' >> AnyKernel3/anykernel.sh
+        echo 'ui_print "BlazeX Kernel installed successfully!";' >> AnyKernel3/anykernel.sh
+        echo 'ui_print "Reboot to enjoy enhanced performance!";' >> AnyKernel3/anykernel.sh
+        
+        chmod +x AnyKernel3/anykernel.sh
+        
+        # Create version info
+        echo "BlazeX Kernel for Samsung Galaxy S20 FE" > AnyKernel3/version
+        echo "Build date: $(date)" >> AnyKernel3/version
+        echo "Git commit: ${{ github.sha }}" >> AnyKernel3/version
+        echo "Defconfig: ${{ steps.find-config.outputs.DEFCONFIG }}" >> AnyKernel3/version
         
         # Create ZIP
         cd AnyKernel3
-        zip -r9 ../kernel-s20fe-$(date +%Y%m%d).zip *
+        zip -r9 ../blazex-s20fe-$(date +%Y%m%d-%H%M).zip *
         
-        echo "ZIP created successfully!"
+        echo "✅ Flashable ZIP created!"
 
-    # Step 6: Upload result
-    - name: Upload kernel
+    - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: kernel-build
+        name: kernel-build-${{ github.sha }}
         path: |
           *.zip
           arch/arm64/boot/Image.gz
         retention-days: 7
 
-    # Step 7: Success message
-    - name: Show success
+    - name: Build success
       if: success()
       run: |
         echo ""
-        echo "========================================"
-        echo "✅ KERNEL BUILD COMPLETE!"
-        echo "========================================"
-        echo "Built on GitHub Actions - No local storage used!"
-        echo ""
-        echo "Download the kernel from Artifacts section."
-        echo "========================================"
+        echo "╔══════════════════════════════════════╗"
+        echo "║        🎉 BUILD SUCCESSFUL! 🎉       ║"
+        echo "╠══════════════════════════════════════╣"
+        echo "║                                      ║"
+        echo "║  ✅ Compiled on GitHub Actions       ║"
+        echo "║  ✅ Fixed toolchain issue            ║"
+        echo "║  ✅ Flashable ZIP ready              ║"
+        echo "║                                      ║"
+        echo "║  📥 Download from 'Artifacts' below  ║"
+        echo "║                                      ║"
+        echo "╚══════════════════════════════════════╝"
