@@ -79,20 +79,21 @@ jobs:
         make mrproper 2>/dev/null || true
         
         # Load config
-        make $KERNEL_CONFIG
+        make ARCH=arm64 $KERNEL_CONFIG
         
         # Build with NEW Clang 17 (FIX for --no-warn-rwx-segments error)
         echo "Using Clang 17 toolchain..."
         
         # Method 1: Try with Clang 17
         make -j$(nproc) \
+          ARCH=arm64 \
           CC=$(pwd)/clang-17/bin/clang \
-          LD=ld.lld \
-          AR=llvm-ar \
-          NM=llvm-nm \
-          OBJCOPY=llvm-objcopy \
-          OBJDUMP=llvm-objdump \
-          STRIP=llvm-strip \
+          LD=$(pwd)/clang-17/bin/ld.lld \
+          AR=$(pwd)/clang-17/bin/llvm-ar \
+          NM=$(pwd)/clang-17/bin/llvm-nm \
+          OBJCOPY=$(pwd)/clang-17/bin/llvm-objcopy \
+          OBJDUMP=$(pwd)/clang-17/bin/llvm-objdump \
+          STRIP=$(pwd)/clang-17/bin/llvm-strip \
           CROSS_COMPILE=aarch64-linux-gnu- \
           CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
           LLVM=1 \
@@ -108,7 +109,7 @@ jobs:
           
           # Method 2: Try with GCC only (no Clang)
           make clean
-          make $KERNEL_CONFIG
+          make ARCH=arm64 $KERNEL_CONFIG
           make -j$(nproc) \
             ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu-
