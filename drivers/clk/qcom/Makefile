@@ -1,3 +1,6 @@
+ccflags-y += -I$(srctree)/drivers/clk/qcom
+
+
 # SPDX-License-Identifier: GPL-2.0
 obj-$(CONFIG_COMMON_CLK_QCOM) += clk-qcom.o
 
