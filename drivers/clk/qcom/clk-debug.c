@@ -15,7 +15,7 @@
 #include <trace/events/power.h>
 
 #define CREATE_TRACE_POINTS
-#include "trace.h"
+#include <trace/events/clk_qcom.h>
 
 #include "clk-regmap.h"
 #include "clk-debug.h"
