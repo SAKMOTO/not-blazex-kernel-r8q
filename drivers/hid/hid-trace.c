@@ -14,5 +14,4 @@
 
 
 /* Instantiate tracepoints */
-#define CREATE_TRACE_POINTS
-#include "hid-trace.h"
+
