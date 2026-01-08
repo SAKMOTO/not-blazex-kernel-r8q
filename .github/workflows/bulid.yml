@@ -1,4 +1,4 @@
-name: Build Samsung S20 FE Kernel
+name: Build Samsung Galaxy S20 FE Kernel (BlazeX)
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     env:
       ARCH: arm64
@@ -16,26 +16,26 @@ jobs:
       DEFCONFIG: not_defconfig
 
     steps:
-    - name: 📥 Checkout source
+    - name: 📥 Checkout kernel source
       uses: actions/checkout@v4
       with:
         submodules: true
         fetch-depth: 1
 
-    - name: 🛠 Install build dependencies (CORRECT TOOLCHAIN)
+    - name: 🛠 Install build dependencies (Clang + LLD FIX)
       run: |
         sudo apt update
         sudo apt install -y \
           bc bison build-essential curl flex git \
           libelf-dev libssl-dev libncurses5-dev lz4 \
           python3 python3-pip zip \
-          clang llvm \
+          clang llvm lld \
           gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
 
         echo "🔎 Toolchain versions:"
         clang --version
+        ld.lld --version
         aarch64-linux-gnu-gcc --version
-        ld --version
 
     - name: 🧹 Clean kernel source
       run: |
@@ -48,7 +48,7 @@ jobs:
         ls arch/arm64/configs/$DEFCONFIG
         make $DEFCONFIG
 
-    - name: 🔨 Build kernel (Clang + GNU ld)
+    - name: 🔨 Build kernel (Samsung-safe Clang config)
       run: |
         make -j$(nproc) \
           ARCH=arm64 \
@@ -72,34 +72,34 @@ jobs:
         cp arch/arm64/boot/Image.gz AnyKernel3/
 
         cat << 'EOF' > AnyKernel3/anykernel.sh
-        #!/bin/bash
+#!/bin/bash
 
-        kernel.string=BlazeX Kernel
-        do.devicecheck=1
-        do.modules=0
-        do.systemless=1
-        do.cleanup=1
+kernel.string=BlazeX Kernel
+do.devicecheck=1
+do.modules=0
+do.systemless=1
+do.cleanup=1
 
-        device.name1=r8q
-        device.name2=r8s
+device.name1=r8q
+device.name2=r8s
 
-        . tools/ak3-core.sh
+. tools/ak3-core.sh
 
-        case "$(getprop ro.product.device)" in
-          r8q|r8s)
-            ui_print "Installing BlazeX Kernel for Galaxy S20 FE"
-            block=/dev/block/by-name/boot
-            ;;
-          *)
-            abort "Unsupported device!"
-            ;;
-        esac
+case "$(getprop ro.product.device)" in
+  r8q|r8s)
+    ui_print "Installing BlazeX Kernel for Galaxy S20 FE"
+    block=/dev/block/by-name/boot
+    ;;
+  *)
+    abort "Unsupported device!"
+    ;;
+esac
 
-        dump_boot
-        write_boot
+dump_boot
+write_boot
 
-        ui_print "BlazeX Kernel installed successfully!"
-        EOF
+ui_print "BlazeX Kernel installed successfully!"
+EOF
 
         chmod +x AnyKernel3/anykernel.sh
 
@@ -116,7 +116,7 @@ jobs:
       with:
         name: BlazeX-Kernel-S20FE
         path: |
-          *.zip
+          BlazeX-S20FE-*.zip
           arch/arm64/boot/Image.gz
         retention-days: 7
 
