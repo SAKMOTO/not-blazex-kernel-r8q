@@ -14,7 +14,7 @@ jobs:
     - name: Checkout source
       uses: actions/checkout@v4
 
-    - name: Install required tools (WITH LLD THIS TIME)
+    - name: Install required tools
       run: |
         sudo apt update
         sudo apt install -y \
@@ -28,17 +28,10 @@ jobs:
           gcc-aarch64-linux-gnu \
           gcc-arm-linux-gnueabi \
           binutils-aarch64-linux-gnu \
-          clang \
-          lld \
-          llvm \
           python3 \
           python-is-python3
-        
-        # Verify LLD is installed
-        which ld.lld
-        ld.lld --version
 
-    - name: Build everything (FORCE VDSO DISABLE)
+    - name: Build everything (SIMPLE AND WORKING)
       run: |
         # Clean first
         make clean
@@ -47,40 +40,50 @@ jobs:
         # Load defconfig
         make ARCH=arm64 not_defconfig
         
-        # MANUALLY EDIT .config to FORCE VDSO OFF
-        echo "========================================="
-        echo "FORCING VDSO DISABLE IN .config"
-        echo "========================================="
+        # USE A SIMPLE SCRIPT TO FIX .config
+        cat > fix_config.py << 'EOF'
+#!/usr/bin/env python3
+import re
+
+with open('.config', 'r') as f:
+    content = f.read()
+
+# Disable problematic configs
+replacements = [
+    ('CONFIG_ARM64_VDSO=y', 'CONFIG_ARM64_VDSO=n'),
+    ('CONFIG_COMPAT_VDSO=y', 'CONFIG_COMPAT_VDSO=n'),
+    ('CONFIG_EFI=y', 'CONFIG_EFI=n'),
+    ('CONFIG_EFI_STUB=y', 'CONFIG_EFI_STUB=n'),
+    ('CONFIG_QCLD=y', 'CONFIG_QCLD=n'),
+    ('CONFIG_BLK_DEV_INITRD=y', 'CONFIG_BLK_DEV_INITRD=n'),
+]
+
+for old, new in replacements:
+    content = content.replace(old, new)
+
+# Remove any initramfs source
+content = re.sub(r'CONFIG_INITRAMFS_SOURCE=.*', 'CONFIG_INITRAMFS_SOURCE=""', content)
+
+with open('.config', 'w') as f:
+    f.write(content)
+
+print("Config fixed successfully")
+EOF
         
-        # Backup original .config
-        cp .config .config.backup
+        python3 fix_config.py
         
-        # Use sed to FORCE disable VDSO (more reliable than scripts/config)
-        sed -i 's/CONFIG_ARM64_VDSO=y/CONFIG_ARM64_VDSO=n/g' .config
-        sed -i 's/CONFIG_COMPAT_VDSO=y/CONFIG_COMPAT_VDSO=n/g' .config
+        # Verify changes
+        echo "Checking VDSO is disabled:"
+        grep "CONFIG_ARM64_VDSO" .config || echo "VDSO config not found"
         
-        # Also disable other problematic configs
-        sed -i 's/CONFIG_EFI=y/CONFIG_EFI=n/g' .config
-        sed -i 's/CONFIG_EFI_STUB=y/CONFIG_EFI_STUB=n/g' .config
-        sed -i 's/CONFIG_QCLD=y/CONFIG_QCLD=n/g' .config
-        
-        # FORCE disable initramfs if rcSTPD error appears
-        sed -i 's/CONFIG_BLK_DEV_INITRD=y/CONFIG_BLK_DEV_INITRD=n/g' .config
-        sed -i 's/CONFIG_INITRAMFS_SOURCE=.*/CONFIG_INITRAMFS_SOURCE=""/g' .config
-        
-        # Show what we changed
-        echo "Checking VDSO status after edit:"
-        grep "CONFIG_ARM64_VDSO" .config
-        grep "CONFIG_COMPAT_VDSO" .config
-        
-        # Update dependencies
+        # Update config
         make ARCH=arm64 olddefconfig
         
         # Build kernel
         make -j$(nproc) \
           ARCH=arm64 \
           CROSS_COMPILE=aarch64-linux-gnu- \
-          CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+          CROSS_COMPILE_ARM32=arm-linux-gnueabi- 2>&1 | tee build.log
 
     - name: Verify image
       run: |
@@ -91,9 +94,9 @@ jobs:
           echo "✅ Kernel build successful (Image.gz)"
           ls -lh arch/arm64/boot/Image.gz
         else
-          echo "❌ Build failed - no kernel image found"
-          echo "Last 50 lines of build log:"
-          tail -50 build.log 2>/dev/null || echo "No build.log"
+          echo "❌ Build failed"
+          echo "Last 20 lines of build log:"
+          tail -20 build.log
           exit 1
         fi
 
