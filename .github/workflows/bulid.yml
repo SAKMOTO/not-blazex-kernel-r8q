@@ -14,7 +14,7 @@ jobs:
     - name: Checkout source
       uses: actions/checkout@v4
 
-    - name: Install required tools
+    - name: Install required tools (WITH LLD)
       run: |
         sudo apt update
         sudo apt install -y \
@@ -28,10 +28,13 @@ jobs:
           gcc-aarch64-linux-gnu \
           gcc-arm-linux-gnueabi \
           binutils-aarch64-linux-gnu \
+          clang \
+          lld \
+          llvm \
           python3 \
           python-is-python3
 
-    - name: Build everything (ARCH in all commands)
+    - name: Build everything
       run: |
         # Clean first
         make clean
@@ -41,10 +44,8 @@ jobs:
         echo "Checking for not_defconfig..."
         if [ -f arch/arm64/configs/not_defconfig ]; then
           echo "✅ Defconfig found"
-          ls -la arch/arm64/configs/not_defconfig
         else
           echo "❌ Defconfig NOT found"
-          echo "Available configs:"
           ls arch/arm64/configs/ || echo "No ARM64 configs directory"
           exit 1
         fi
@@ -52,13 +53,14 @@ jobs:
         # Load defconfig WITH ARCH
         make ARCH=arm64 not_defconfig
         
-        # Fix config
+        # Fix config - DISABLE VDSO completely (this is the KEY FIX)
         scripts/config --disable CONFIG_EFI
         scripts/config --disable CONFIG_EFI_STUB
         scripts/config --disable CONFIG_QCLD
+        scripts/config --disable CONFIG_ARM64_VDSO
         make ARCH=arm64 olddefconfig
         
-        # Build kernel
+        # Build kernel WITHOUT VDSO
         make -j$(nproc) \
           ARCH=arm64 \
           CROSS_COMPILE=aarch64-linux-gnu- \
