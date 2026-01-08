@@ -29,13 +29,13 @@ jobs:
           bc bison build-essential curl flex git \
           libelf-dev libssl-dev libncurses5-dev lz4 \
           python3 python3-pip zip \
-          llvm clang lld \
+          clang llvm \
           gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
 
         echo "🔎 Toolchain versions:"
         clang --version
-        ld.lld --version
         aarch64-linux-gnu-gcc --version
+        ld --version
 
     - name: 🧹 Clean kernel source
       run: |
@@ -48,14 +48,12 @@ jobs:
         ls arch/arm64/configs/$DEFCONFIG
         make $DEFCONFIG
 
-    - name: 🔨 Build kernel (LLVM / Clang)
+    - name: 🔨 Build kernel (Clang + GNU ld)
       run: |
         make -j$(nproc) \
           ARCH=arm64 \
           CC=clang \
-          LD=ld.lld \
           LLVM=1 \
-          LLVM_IAS=1 \
           CROSS_COMPILE=aarch64-linux-gnu- \
           CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
