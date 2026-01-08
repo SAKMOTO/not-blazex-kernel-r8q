@@ -29,15 +29,14 @@ jobs:
           bc bison build-essential curl flex git \
           libelf-dev libssl-dev libncurses-dev \
           python3 python3-pip zip \
-          gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
-          clang lld binutils-aarch64-linux-gnu
+          clang lld llvm \
+          gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
 
-        echo "Tool versions:"
+        which ld.lld
+        ld.lld --version
         clang --version
-        aarch64-linux-gnu-gcc --version
-        ld.bfd --version
 
-    - name: 🧹 Clean kernel tree
+    - name: 🧹 Clean kernel
       run: |
         make mrproper
 
@@ -45,7 +44,7 @@ jobs:
       run: |
         make $DEFCONFIG
 
-    - name: 🔧 Fix Samsung CI config (NO menuconfig)
+    - name: 🔧 Disable problematic Samsung options
       run: |
         scripts/config --disable CONFIG_EFI
         scripts/config --disable CONFIG_EFI_STUB
@@ -55,70 +54,34 @@ jobs:
         scripts/config --disable CONFIG_FTRACE
         scripts/config --disable CONFIG_FUNCTION_TRACER
         scripts/config --disable CONFIG_DYNAMIC_FTRACE
-
-        scripts/config --enable CONFIG_ARM64
-        scripts/config --enable CONFIG_MODULES
-
         make olddefconfig
 
-    - name: 🔨 Build kernel (SAFE MODE)
+    - name: 🔨 Build kernel (LLVM – SAFE)
       run: |
         make -j$(nproc) \
           ARCH=arm64 \
           CC=clang \
-          LD=ld.bfd \
+          LD=ld.lld \
+          LLVM=1 \
+          LLVM_IAS=1 \
           CROSS_COMPILE=aarch64-linux-gnu- \
-          CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
-          KCFLAGS="-fno-pic"
+          CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-    - name: ✅ Verify kernel image
+    - name: ✅ Verify Image
       run: |
-        if [ ! -f arch/arm64/boot/Image.gz ]; then
-          echo "❌ Image.gz not found"
-          exit 1
-        fi
         ls -lh arch/arm64/boot/Image.gz
 
-    - name: 📦 Create AnyKernel3 ZIP
+    - name: 📦 AnyKernel3
       run: |
         git clone https://github.com/osm0sis/AnyKernel3 --depth=1
         cp arch/arm64/boot/Image.gz AnyKernel3/
-
-        cat << 'EOF' > AnyKernel3/anykernel.sh
-        #!/bin/bash
-        kernel.string=BlazeX Kernel
-        do.devicecheck=1
-        do.modules=0
-        do.systemless=1
-        do.cleanup=1
-
-        device.name1=r8q
-        device.name2=r8s
-
-        . tools/ak3-core.sh
-
-        case "$(getprop ro.product.device)" in
-          r8q|r8s)
-            block=/dev/block/by-name/boot
-            ;;
-          *)
-            abort "Unsupported device"
-            ;;
-        esac
-
-        dump_boot
-        write_boot
-        EOF
-
-        chmod +x AnyKernel3/anykernel.sh
         cd AnyKernel3
-        zip -r9 ../BlazeX-S20FE-$(date +%Y%m%d-%H%M).zip *
+        zip -r9 ../BlazeX-S20FE.zip *
 
-    - name: ⬆️ Upload build artifacts
+    - name: ⬆️ Upload
       uses: actions/upload-artifact@v4
       with:
-        name: BlazeX-Kernel-S20FE
+        name: BlazeX-Kernel
         path: |
-          BlazeX-S20FE-*.zip
+          BlazeX-S20FE.zip
           arch/arm64/boot/Image.gz
-        retention-days: 7
