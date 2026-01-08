@@ -1,4 +1,4 @@
-name: Build Samsung S20 FE Kernel
+name: Build Samsung S20 FE Kernel (GCC)
 
 on:
   push:
@@ -7,12 +7,13 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 90
 
     env:
       ARCH: arm64
       SUBARCH: arm64
+      CROSS_COMPILE: aarch64-linux-gnu-
       DEFCONFIG: not_defconfig
 
     steps:
@@ -22,19 +23,19 @@ jobs:
         submodules: true
         fetch-depth: 1
 
-    - name: 🛠 Install build dependencies
+    - name: 🛠 Install build dependencies (GCC ONLY)
       run: |
         sudo apt update
         sudo apt install -y \
           bc bison build-essential curl flex git \
           libelf-dev libssl-dev libncurses-dev \
-          python3 python3-pip zip \
-          clang lld llvm \
-          gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
+          python3 python-is-python3 zip \
+          gcc-aarch64-linux-gnu \
+          gcc-arm-linux-gnueabi \
+          binutils-aarch64-linux-gnu
 
-        which ld.lld
-        ld.lld --version
-        clang --version
+        aarch64-linux-gnu-gcc --version
+        aarch64-linux-gnu-ld --version
 
     - name: 🧹 Clean kernel
       run: |
@@ -44,44 +45,25 @@ jobs:
       run: |
         make $DEFCONFIG
 
-    - name: 🔧 Disable problematic Samsung options
+    - name: 🔨 Build kernel (GCC – STABLE)
       run: |
-        scripts/config --disable CONFIG_EFI
-        scripts/config --disable CONFIG_EFI_STUB
-        scripts/config --disable CONFIG_QCLD
-        scripts/config --disable CONFIG_LTO
-        scripts/config --disable CONFIG_CFI_CLANG
-        scripts/config --disable CONFIG_FTRACE
-        scripts/config --disable CONFIG_FUNCTION_TRACER
-        scripts/config --disable CONFIG_DYNAMIC_FTRACE
-        make olddefconfig
-
-    - name: 🔨 Build kernel (LLVM – SAFE)
-      run: |
-        make -j$(nproc) \
-          ARCH=arm64 \
-          CC=clang \
-          LD=ld.lld \
-          LLVM=1 \
-          LLVM_IAS=1 \
-          CROSS_COMPILE=aarch64-linux-gnu- \
-          CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+        make -j$(nproc)
 
     - name: ✅ Verify Image
       run: |
-        ls -lh arch/arm64/boot/Image.gz
+        ls -lh arch/arm64/boot/Image || exit 1
 
-    - name: 📦 AnyKernel3
+    - name: 📦 Package with AnyKernel3
       run: |
         git clone https://github.com/osm0sis/AnyKernel3 --depth=1
-        cp arch/arm64/boot/Image.gz AnyKernel3/
+        cp arch/arm64/boot/Image AnyKernel3/
         cd AnyKernel3
         zip -r9 ../BlazeX-S20FE.zip *
 
-    - name: ⬆️ Upload
+    - name: ⬆️ Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: BlazeX-Kernel
         path: |
           BlazeX-S20FE.zip
-          arch/arm64/boot/Image.gz
+          arch/arm64/boot/Image
