@@ -15,12 +15,14 @@
 #if !defined(_HID_TRACE_H) || defined(TRACE_HEADER_MULTI_READ)
 #define _HID_TRACE_H
 
-#undef TRACE_SYSTEM
-#define TRACE_SYSTEM hid
 #undef TRACE_INCLUDE_PATH
-#define TRACE_INCLUDE_PATH .
+#define TRACE_INCLUDE_PATH drivers/hid
+
 #undef TRACE_INCLUDE_FILE
 #define TRACE_INCLUDE_FILE hid-trace
+
+#include <trace/define_trace.h>
+
 
 #include <linux/tracepoint.h>
 
