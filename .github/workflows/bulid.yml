@@ -14,7 +14,7 @@ jobs:
     - name: Checkout source
       uses: actions/checkout@v4
 
-    - name: Install required tools
+    - name: Install required tools (WITH LLD THIS TIME)
       run: |
         sudo apt update
         sudo apt install -y \
@@ -28,35 +28,55 @@ jobs:
           gcc-aarch64-linux-gnu \
           gcc-arm-linux-gnueabi \
           binutils-aarch64-linux-gnu \
+          clang \
+          lld \
+          llvm \
           python3 \
           python-is-python3
+        
+        # Verify LLD is installed
+        which ld.lld
+        ld.lld --version
 
-    - name: Build everything (WITH INITRAMFS DISABLED)
+    - name: Build everything (FORCE VDSO DISABLE)
       run: |
         # Clean first
         make clean
         make mrproper
         
-        # Load defconfig WITH ARCH
+        # Load defconfig
         make ARCH=arm64 not_defconfig
         
-        # Fix config - DISABLE problem features
-        scripts/config --disable CONFIG_EFI
-        scripts/config --disable CONFIG_EFI_STUB
-        scripts/config --disable CONFIG_QCLD
-        scripts/config --disable CONFIG_ARM64_VDSO
-        scripts/config --disable CONFIG_BLK_DEV_INITRD
-        scripts/config --disable CONFIG_INITRAMFS_SOURCE
-        scripts/config --disable CONFIG_RD_GZIP
-        scripts/config --disable CONFIG_RD_BZIP2
-        scripts/config --disable CONFIG_RD_LZMA
-        scripts/config --disable CONFIG_RD_XZ
-        scripts/config --disable CONFIG_RD_LZO
-        scripts/config --disable CONFIG_RD_LZ4
+        # MANUALLY EDIT .config to FORCE VDSO OFF
+        echo "========================================="
+        echo "FORCING VDSO DISABLE IN .config"
+        echo "========================================="
         
+        # Backup original .config
+        cp .config .config.backup
+        
+        # Use sed to FORCE disable VDSO (more reliable than scripts/config)
+        sed -i 's/CONFIG_ARM64_VDSO=y/CONFIG_ARM64_VDSO=n/g' .config
+        sed -i 's/CONFIG_COMPAT_VDSO=y/CONFIG_COMPAT_VDSO=n/g' .config
+        
+        # Also disable other problematic configs
+        sed -i 's/CONFIG_EFI=y/CONFIG_EFI=n/g' .config
+        sed -i 's/CONFIG_EFI_STUB=y/CONFIG_EFI_STUB=n/g' .config
+        sed -i 's/CONFIG_QCLD=y/CONFIG_QCLD=n/g' .config
+        
+        # FORCE disable initramfs if rcSTPD error appears
+        sed -i 's/CONFIG_BLK_DEV_INITRD=y/CONFIG_BLK_DEV_INITRD=n/g' .config
+        sed -i 's/CONFIG_INITRAMFS_SOURCE=.*/CONFIG_INITRAMFS_SOURCE=""/g' .config
+        
+        # Show what we changed
+        echo "Checking VDSO status after edit:"
+        grep "CONFIG_ARM64_VDSO" .config
+        grep "CONFIG_COMPAT_VDSO" .config
+        
+        # Update dependencies
         make ARCH=arm64 olddefconfig
         
-        # Build kernel WITHOUT initramfs
+        # Build kernel
         make -j$(nproc) \
           ARCH=arm64 \
           CROSS_COMPILE=aarch64-linux-gnu- \
@@ -72,7 +92,8 @@ jobs:
           ls -lh arch/arm64/boot/Image.gz
         else
           echo "❌ Build failed - no kernel image found"
-          ls -lh arch/arm64/boot/ || echo "Boot directory not found"
+          echo "Last 50 lines of build log:"
+          tail -50 build.log 2>/dev/null || echo "No build.log"
           exit 1
         fi
 
