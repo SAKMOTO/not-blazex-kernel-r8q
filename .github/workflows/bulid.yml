@@ -31,33 +31,34 @@ jobs:
           python3 \
           python-is-python3
 
-    - name: Set ARCH environment variable
+    - name: Build everything (ARCH in all commands)
       run: |
-        echo "ARCH=arm64" >> $GITHUB_ENV
-
-    - name: Clean kernel
-      run: |
+        # Clean first
         make clean
         make mrproper
-
-    - name: Load defconfig (using not_defconfig)
-      run: |
-        echo "Looking for not_defconfig..."
-        ls arch/arm64/configs/ || echo "ARM64 configs directory not found"
-        ls arch/arm64/configs/not_defconfig || echo "Defconfig not found"
         
-        # Set ARCH explicitly and load defconfig
+        # Check defconfig exists
+        echo "Checking for not_defconfig..."
+        if [ -f arch/arm64/configs/not_defconfig ]; then
+          echo "✅ Defconfig found"
+          ls -la arch/arm64/configs/not_defconfig
+        else
+          echo "❌ Defconfig NOT found"
+          echo "Available configs:"
+          ls arch/arm64/configs/ || echo "No ARM64 configs directory"
+          exit 1
+        fi
+        
+        # Load defconfig WITH ARCH
         make ARCH=arm64 not_defconfig
-
-    - name: Fix config (disable EFI and QCLD)
-      run: |
+        
+        # Fix config
         scripts/config --disable CONFIG_EFI
         scripts/config --disable CONFIG_EFI_STUB
         scripts/config --disable CONFIG_QCLD
         make ARCH=arm64 olddefconfig
-
-    - name: Build kernel
-      run: |
+        
+        # Build kernel
         make -j$(nproc) \
           ARCH=arm64 \
           CROSS_COMPILE=aarch64-linux-gnu- \
