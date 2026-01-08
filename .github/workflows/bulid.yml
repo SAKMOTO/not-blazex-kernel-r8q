@@ -31,6 +31,10 @@ jobs:
           python3 \
           python-is-python3
 
+    - name: Set ARCH environment variable
+      run: |
+        echo "ARCH=arm64" >> $GITHUB_ENV
+
     - name: Clean kernel
       run: |
         make clean
@@ -38,14 +42,19 @@ jobs:
 
     - name: Load defconfig (using not_defconfig)
       run: |
-        make not_defconfig
+        echo "Looking for not_defconfig..."
+        ls arch/arm64/configs/ || echo "ARM64 configs directory not found"
+        ls arch/arm64/configs/not_defconfig || echo "Defconfig not found"
+        
+        # Set ARCH explicitly and load defconfig
+        make ARCH=arm64 not_defconfig
 
     - name: Fix config (disable EFI and QCLD)
       run: |
         scripts/config --disable CONFIG_EFI
         scripts/config --disable CONFIG_EFI_STUB
         scripts/config --disable CONFIG_QCLD
-        make olddefconfig
+        make ARCH=arm64 olddefconfig
 
     - name: Build kernel
       run: |
@@ -59,15 +68,23 @@ jobs:
         if [ -f arch/arm64/boot/Image ]; then
           echo "✅ Kernel build successful"
           ls -lh arch/arm64/boot/Image
+        elif [ -f arch/arm64/boot/Image.gz ]; then
+          echo "✅ Kernel build successful (Image.gz)"
+          ls -lh arch/arm64/boot/Image.gz
         else
-          echo "❌ Build failed"
+          echo "❌ Build failed - no kernel image found"
+          ls -lh arch/arm64/boot/ || echo "Boot directory not found"
           exit 1
         fi
 
     - name: Package with AnyKernel3
       run: |
         git clone https://github.com/osm0sis/AnyKernel3 --depth=1
-        cp arch/arm64/boot/Image AnyKernel3/
+        if [ -f arch/arm64/boot/Image ]; then
+          cp arch/arm64/boot/Image AnyKernel3/
+        elif [ -f arch/arm64/boot/Image.gz ]; then
+          cp arch/arm64/boot/Image.gz AnyKernel3/
+        fi
         cd AnyKernel3
         zip -r9 ../kernel.zip *
 
@@ -77,4 +94,5 @@ jobs:
         name: kernel-artifacts
         path: |
           kernel.zip
-          arch/arm64/boot/Image
+          arch/arm64/boot/Image*
+        retention-days: 7
