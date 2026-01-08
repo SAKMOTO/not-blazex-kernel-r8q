@@ -1,69 +1,80 @@
-name: Build Samsung S20 FE Kernel (GCC)
+name: Build Samsung S20 FE Kernel
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-22.04
-    timeout-minutes: 90
-
-    env:
-      ARCH: arm64
-      SUBARCH: arm64
-      CROSS_COMPILE: aarch64-linux-gnu-
-      DEFCONFIG: not_defconfig
+    timeout-minutes: 60
 
     steps:
-    - name: 📥 Checkout source
+    - name: Checkout source
       uses: actions/checkout@v4
-      with:
-        submodules: true
-        fetch-depth: 1
 
-    - name: 🛠 Install build dependencies (GCC ONLY)
+    - name: Install required tools
       run: |
         sudo apt update
         sudo apt install -y \
-          bc bison build-essential curl flex git \
-          libelf-dev libssl-dev libncurses-dev \
-          python3 python-is-python3 zip \
+          build-essential \
+          bc \
+          bison \
+          flex \
+          libssl-dev \
+          libelf-dev \
+          libncurses-dev \
           gcc-aarch64-linux-gnu \
           gcc-arm-linux-gnueabi \
-          binutils-aarch64-linux-gnu
+          binutils-aarch64-linux-gnu \
+          python3 \
+          python-is-python3
 
-        aarch64-linux-gnu-gcc --version
-        aarch64-linux-gnu-ld --version
-
-    - name: 🧹 Clean kernel
+    - name: Clean kernel
       run: |
+        make clean
         make mrproper
 
-    - name: ⚙️ Load defconfig
+    - name: Load defconfig (using not_defconfig)
       run: |
-        make $DEFCONFIG
+        make not_defconfig
 
-    - name: 🔨 Build kernel (GCC – STABLE)
+    - name: Fix config (disable EFI and QCLD)
       run: |
-        make -j$(nproc)
+        scripts/config --disable CONFIG_EFI
+        scripts/config --disable CONFIG_EFI_STUB
+        scripts/config --disable CONFIG_QCLD
+        make olddefconfig
 
-    - name: ✅ Verify Image
+    - name: Build kernel
       run: |
-        ls -lh arch/arm64/boot/Image || exit 1
+        make -j$(nproc) \
+          ARCH=arm64 \
+          CROSS_COMPILE=aarch64-linux-gnu- \
+          CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-    - name: 📦 Package with AnyKernel3
+    - name: Verify image
+      run: |
+        if [ -f arch/arm64/boot/Image ]; then
+          echo "✅ Kernel build successful"
+          ls -lh arch/arm64/boot/Image
+        else
+          echo "❌ Build failed"
+          exit 1
+        fi
+
+    - name: Package with AnyKernel3
       run: |
         git clone https://github.com/osm0sis/AnyKernel3 --depth=1
         cp arch/arm64/boot/Image AnyKernel3/
         cd AnyKernel3
-        zip -r9 ../BlazeX-S20FE.zip *
+        zip -r9 ../kernel.zip *
 
-    - name: ⬆️ Upload artifacts
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: BlazeX-Kernel
+        name: kernel-artifacts
         path: |
-          BlazeX-S20FE.zip
+          kernel.zip
           arch/arm64/boot/Image
